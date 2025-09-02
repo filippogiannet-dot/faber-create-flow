@@ -3,64 +3,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Check } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
 const Pricing = () => {
-  const plans = [
-    {
-      name: "Starter",
-      price: "€8.99",
-      period: "/mese",
-      description: "Perfetto per iniziare",
-      features: [
-        "50 generazioni al mese",
-        "Supporto via email",
-        "Template di base",
-        "Export codice"
-      ],
-      popular: false
-    },
-    {
-      name: "Pro",
-      price: "€14.99",
-      period: "/mese",
-      description: "Per creatori professionali",
-      features: [
-        "100 generazioni al mese",
-        "Supporto prioritario",
-        "Template premium",
-        "Export codice avanzato",
-        "Collaborazione team",
-        "API access"
-      ],
-      popular: true
-    },
-    {
-      name: "Enterprise",
-      price: "Contattaci",
-      period: "",
-      description: "Per aziende che necessitano volumi maggiori",
-      features: [
-        "Generazioni illimitate",
-        "Supporto dedicato",
-        "Custom templates",
-        "White-label solution",
-        "Team management",
-        "API illimitato",
-        "SLA garantito"
-      ],
-      popular: false
-    }
-  ];
-
-  return (
-    <div className="min-h-screen bg-background">
+  const plans = [{
+    name: "Starter",
+    price: "€8.99",
+    period: "/mese",
+    description: "Perfetto per iniziare",
+    features: ["50 generazioni al mese", "Supporto via email", "Template di base", "Export codice"],
+    popular: false
+  }, {
+    name: "Pro",
+    price: "€14.99",
+    period: "/mese",
+    description: "Per creatori professionali",
+    features: ["100 generazioni al mese", "Supporto prioritario", "Template premium", "Export codice avanzato", "Collaborazione team", "API access"],
+    popular: true
+  }, {
+    name: "Enterprise",
+    price: "Contattaci",
+    period: "",
+    description: "Per aziende che necessitano volumi maggiori",
+    features: ["Generazioni illimitate", "Supporto dedicato", "Custom templates", "White-label solution", "Team management", "API illimitato", "SLA garantito"],
+    popular: false
+  }];
+  return <div className="min-h-screen bg-background">
       <Navbar />
       
       <main className="pt-20 pb-16">
         <div className="max-w-7xl mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-16">
-            <h1 className="text-section-title font-bold chrome-text mb-6">
+            <h1 className="text-section-title font-bold chrome-text mb-6 mx-[9px] my-0 px-[11px] py-[6px]">
               Scegli il tuo{" "}
               <span className="chrome-text">
                 piano
@@ -73,20 +46,12 @@ const Pricing = () => {
 
           {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {plans.map((plan, index) => (
-              <Card 
-                key={plan.name} 
-                 className={`relative bg-gradient-card border-border transition-all duration-300 hover:shadow-faber-card hover:scale-[1.02] ${
-                  plan.popular ? 'ring-2 ring-primary shadow-faber-glow' : ''
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+            {plans.map((plan, index) => <Card key={plan.name} className={`relative bg-gradient-card border-border transition-all duration-300 hover:shadow-faber-card hover:scale-[1.02] ${plan.popular ? 'ring-2 ring-primary shadow-faber-glow' : ''}`}>
+                {plan.popular && <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-gradient-button text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
                       Più popolare
                     </span>
-                  </div>
-                )}
+                  </div>}
                 
                 <CardHeader className="text-center pb-6">
                   <CardTitle className="text-xl font-bold text-foreground mb-2">
@@ -99,37 +64,25 @@ const Pricing = () => {
                     <span className="text-3xl md:text-4xl font-bold text-foreground">
                       {plan.price}
                     </span>
-                    {plan.period && (
-                      <span className="text-sm text-muted-foreground ml-1">
+                    {plan.period && <span className="text-sm text-muted-foreground ml-1">
                         {plan.period}
-                      </span>
-                    )}
+                      </span>}
                   </div>
                 </CardHeader>
 
                 <CardContent>
                   <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start">
+                    {plan.features.map((feature, idx) => <li key={idx} className="flex items-start">
                         <Check className="w-4 h-4 text-primary mt-0.5 mr-3 flex-shrink-0" />
                         <span className="text-sm text-card-foreground">{feature}</span>
-                      </li>
-                    ))}
+                      </li>)}
                   </ul>
 
-                  <Button 
-                    className={`w-full text-sm ${
-                      plan.popular 
-                        ? 'bg-gradient-button hover:shadow-faber-button' 
-                        : 'bg-faber-surface-light hover:bg-faber-surface text-foreground border border-border'
-                    } transition-all duration-300 transform hover:scale-[1.02]`}
-                    size="lg"
-                  >
+                  <Button className={`w-full text-sm ${plan.popular ? 'bg-gradient-button hover:shadow-faber-button' : 'bg-faber-surface-light hover:bg-faber-surface text-foreground border border-border'} transition-all duration-300 transform hover:scale-[1.02]`} size="lg">
                     {plan.name === 'Enterprise' ? 'Contatta il team' : 'Inizia ora'}
                   </Button>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
 
           {/* FAQ or additional info could go here */}
@@ -142,8 +95,6 @@ const Pricing = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Pricing;
