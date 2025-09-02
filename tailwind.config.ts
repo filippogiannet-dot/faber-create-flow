@@ -52,16 +52,31 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
-					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-					accent: 'hsl(var(--sidebar-accent))',
-					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
+				/* Faber Brand Colors */
+				faber: {
+					blue: 'hsl(var(--faber-blue))',
+					'blue-light': 'hsl(var(--faber-blue-light))',
+					'blue-dark': 'hsl(var(--faber-blue-dark))',
+					surface: 'hsl(var(--faber-surface))',
+					'surface-light': 'hsl(var(--faber-surface-light))',
+					'text-primary': 'hsl(var(--faber-text-primary))',
+					'text-secondary': 'hsl(var(--faber-text-secondary))'
 				}
+			},
+			backgroundImage: {
+				'gradient-hero': 'var(--gradient-hero)',
+				'gradient-card': 'var(--gradient-card)',
+				'gradient-button': 'var(--gradient-button)',
+				'gradient-planet': 'var(--gradient-planet)'
+			},
+			boxShadow: {
+				'faber-glow': 'var(--shadow-glow)',
+				'faber-card': 'var(--shadow-card)',
+				'faber-button': 'var(--shadow-button)'
+			},
+			transitionTimingFunction: {
+				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
+				'bounce': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
