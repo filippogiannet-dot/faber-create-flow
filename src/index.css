@@ -9,58 +9,70 @@ All colors MUST be HSL. */
   :root {
     /* Dark theme primary colors - Apple-inspired */
     --background: 222 47% 8%;
-    --foreground: 210 40% 100%;
+    --foreground: 217 91% 95%;
 
     --card: 222 43% 11%;
-    --card-foreground: 210 40% 100%;
+    --card-foreground: 217 91% 95%;
 
     --popover: 222 43% 11%;
-    --popover-foreground: 210 40% 100%;
+    --popover-foreground: 217 91% 95%;
 
-    --primary: 217 91% 75%;
+    --primary: 217 91% 80%;
     --primary-foreground: 222 47% 8%;
 
     --secondary: 222 43% 15%;
-    --secondary-foreground: 210 40% 100%;
+    --secondary-foreground: 217 91% 95%;
 
     --muted: 222 43% 15%;
-    --muted-foreground: 215 20% 85%;
+    --muted-foreground: 217 91% 80%;
 
-    --accent: 217 91% 75%;
+    --accent: 217 91% 85%;
     --accent-foreground: 222 47% 8%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 100%;
+    --destructive-foreground: 217 91% 95%;
 
     --border: 222 43% 15%;
     --input: 222 43% 15%;
-    --ring: 217 91% 75%;
+    --ring: 217 91% 85%;
 
     --radius: 0.75rem;
 
     /* Faber Brand Colors - Enhanced Brightness */
-    --faber-blue: 217 91% 75%;
-    --faber-blue-light: 217 91% 85%;
-    --faber-blue-dark: 217 91% 65%;
+    --faber-blue: 217 91% 85%;
+    --faber-blue-light: 217 91% 95%;
+    --faber-blue-dark: 217 91% 75%;
     --faber-surface: 222 43% 11%;
     --faber-surface-light: 222 43% 15%;
-    --faber-text-primary: 210 40% 100%;
-    --faber-text-secondary: 215 20% 90%;
+    --faber-text-primary: 217 91% 95%;
+    --faber-text-secondary: 217 91% 85%;
 
     /* Gradients - Enhanced Chromatic Apple/Bolt Style */
     --gradient-hero: linear-gradient(135deg, 
       hsl(222, 47%, 0%) 0%, 
+      hsl(230, 70%, 0%) 4%, 
       hsl(225, 60%, 1%) 8%, 
+      hsl(210, 80%, 0%) 12%, 
       hsl(217, 91%, 1%) 16%, 
+      hsl(240, 60%, 1%) 20%, 
       hsl(220, 55%, 1%) 24%, 
+      hsl(200, 75%, 0%) 28%, 
       hsl(215, 85%, 2%) 32%, 
+      hsl(235, 65%, 1%) 36%, 
       hsl(217, 91%, 2%) 40%, 
+      hsl(205, 80%, 1%) 44%, 
       hsl(222, 43%, 1%) 48%, 
+      hsl(245, 70%, 1%) 52%, 
       hsl(218, 88%, 3%) 56%, 
+      hsl(195, 85%, 1%) 60%, 
       hsl(220, 50%, 2%) 64%, 
+      hsl(250, 75%, 2%) 68%, 
       hsl(217, 91%, 3%) 72%, 
+      hsl(190, 80%, 1%) 76%, 
       hsl(215, 82%, 2%) 80%, 
+      hsl(240, 65%, 2%) 84%, 
       hsl(222, 48%, 3%) 88%, 
+      hsl(185, 90%, 1%) 92%, 
       hsl(217, 91%, 4%) 96%, 
       hsl(220, 45%, 3%) 100%);
     
@@ -85,35 +97,35 @@ All colors MUST be HSL. */
       hsl(217, 91%, 70%) 100%);
     
     --gradient-planet: radial-gradient(ellipse at bottom, 
-      hsl(217, 91%, 16%) 0%, 
-      hsl(215, 88%, 17%) 12%, 
-      hsl(220, 85%, 18%) 24%, 
-      hsl(217, 91%, 19%) 36%, 
-      hsl(218, 82%, 17%) 48%, 
-      hsl(215, 90%, 15%) 60%, 
-      hsl(220, 78%, 13%) 72%, 
-      hsl(217, 91%, 11%) 80%, 
+      hsl(217, 91%, 1%) 0%, 
+      hsl(215, 88%, 2%) 12%, 
+      hsl(220, 85%, 3%) 24%, 
+      hsl(217, 91%, 4%) 36%, 
+      hsl(218, 82%, 2%) 48%, 
+      hsl(215, 90%, 1%) 60%, 
+      hsl(220, 78%, 1%) 72%, 
+      hsl(217, 91%, 0%) 80%, 
       transparent 88%);
 
     /* Additional Chromatic Backgrounds */
     --gradient-accent: radial-gradient(circle at 20% 80%, 
-      hsl(217, 91%, 15%) 0%, 
+      hsl(217, 91%, 2%) 0%, 
       transparent 50%), 
       radial-gradient(circle at 80% 20%, 
-      hsl(215, 88%, 12%) 0%, 
+      hsl(215, 88%, 1%) 0%, 
       transparent 50%), 
       radial-gradient(circle at 40% 40%, 
-      hsl(220, 85%, 10%) 0%, 
+      hsl(220, 85%, 1%) 0%, 
       transparent 50%);
 
     --gradient-mesh: conic-gradient(from 0deg at 50% 50%, 
-      hsl(217, 91%, 8%) 0deg, 
-      hsl(215, 88%, 10%) 60deg, 
-      hsl(220, 85%, 9%) 120deg, 
-      hsl(217, 91%, 11%) 180deg, 
-      hsl(218, 82%, 8%) 240deg, 
-      hsl(215, 90%, 10%) 300deg, 
-      hsl(217, 91%, 8%) 360deg);
+      hsl(217, 91%, 0%) 0deg, 
+      hsl(215, 88%, 1%) 60deg, 
+      hsl(220, 85%, 0%) 120deg, 
+      hsl(217, 91%, 2%) 180deg, 
+      hsl(218, 82%, 0%) 240deg, 
+      hsl(215, 90%, 1%) 300deg, 
+      hsl(217, 91%, 0%) 360deg);
 
     /* Shadows */
     --shadow-glow: 0 0 40px hsl(217 91% 60% / 0.3);
