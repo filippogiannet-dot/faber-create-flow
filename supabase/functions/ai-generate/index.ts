@@ -7,64 +7,273 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+// Configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff
 
+// Logging utility
+function log(level: 'INFO' | 'ERROR' | 'DEBUG', message: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  const logEntry = {
+    timestamp,
+    level,
+    message,
+    data: data ? JSON.stringify(data, null, 2) : undefined
+  };
+  console.log(`[${timestamp}] ${level}: ${message}`, data || '');
+  return logEntry;
+}
+
+// Sleep utility for retries
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Self-diagnostic function
+async function runDiagnostics() {
+  const diagnostics = {
+    openaiKey: !!Deno.env.get('OPENAI_API_KEY'),
+    supabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+    supabaseKey: !!Deno.env.get('SUPABASE_ANON_KEY'),
+    timestamp: new Date().toISOString()
+  };
+  
+  log('DEBUG', 'System diagnostics', diagnostics);
+  return diagnostics;
+}
+
+// Enhanced OpenAI API call with retries
+async function callOpenAI(prompt: string, systemPrompt: string, retryCount = 0): Promise<any> {
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  if (!openAIApiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+  
+  try {
+    log('DEBUG', `OpenAI API call attempt ${retryCount + 1}`, { 
+      promptLength: prompt.length,
+      systemPromptLength: systemPrompt.length 
+    });
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-2025-08-07',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        max_completion_tokens: 4000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      log('ERROR', `OpenAI API error - Status: ${response.status}`, { 
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        retryCount 
+      });
+      
+      // Handle rate limits and retryable errors
+      if (response.status === 429 || response.status >= 500) {
+        if (retryCount < MAX_RETRIES - 1) {
+          const delay = RETRY_DELAYS[retryCount];
+          log('INFO', `Retrying OpenAI call in ${delay}ms`, { retryCount, delay });
+          await sleep(delay);
+          return callOpenAI(prompt, systemPrompt, retryCount + 1);
+        }
+      }
+      
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
+
+    const aiData = await response.json();
+    log('INFO', 'OpenAI API success', { 
+      tokensUsed: aiData.usage?.total_tokens || 0,
+      retryCount 
+    });
+    
+    return aiData;
+  } catch (error) {
+    log('ERROR', `OpenAI API call failed`, { error: error.message, retryCount });
+    
+    if (retryCount < MAX_RETRIES - 1) {
+      const delay = RETRY_DELAYS[retryCount];
+      log('INFO', `Retrying OpenAI call in ${delay}ms due to error`, { retryCount, delay, error: error.message });
+      await sleep(delay);
+      return callOpenAI(prompt, systemPrompt, retryCount + 1);
+    }
+    
+    throw error;
+  }
+}
+
+// Validate request payload
+function validateRequest(body: any): { projectId: string; prompt: string; isInitial: boolean } {
+  if (!body) {
+    throw new Error('Request body is required');
+  }
+  
+  const { projectId, prompt, isInitial = false } = body;
+  
+  if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+    throw new Error('Prompt is required and must be a non-empty string');
+  }
+  
+  if (!projectId || typeof projectId !== 'string') {
+    throw new Error('Project ID is required and must be a string');
+  }
+  
+  return { projectId, prompt: prompt.trim(), isInitial };
+}
+
+// Main handler
 serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  
+  log('INFO', `Request started`, { 
+    requestId, 
+    method: req.method, 
+    url: req.url,
+    userAgent: req.headers.get('user-agent') 
+  });
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    log('DEBUG', 'CORS preflight request', { requestId });
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    log('ERROR', `Invalid method: ${req.method}`, { requestId });
+    return new Response(JSON.stringify({ 
+      error: 'Method not allowed',
+      success: false,
+      requestId
+    }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-
-    // Get authenticated user
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
-
-    if (!user) {
-      throw new Error('User not authenticated');
+    // Run diagnostics
+    const diagnostics = await runDiagnostics();
+    
+    // Validate environment
+    if (!diagnostics.openaiKey || !diagnostics.supabaseUrl || !diagnostics.supabaseKey) {
+      log('ERROR', 'Missing required environment variables', { requestId, diagnostics });
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error',
+        success: false,
+        requestId
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Check user's usage limits using the database function
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!
+    );
+
+    // Validate authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      log('ERROR', 'No authorization header', { requestId });
+      return new Response(JSON.stringify({ 
+        error: 'Authorization header is required',
+        success: false,
+        requestId
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !userData.user) {
+      log('ERROR', 'Authentication failed', { requestId, authError: authError?.message });
+      return new Response(JSON.stringify({ 
+        error: 'User not authenticated',
+        success: false,
+        requestId
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const user = userData.user;
+    log('INFO', 'User authenticated', { requestId, userId: user.id });
+
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      log('ERROR', 'Invalid JSON in request body', { requestId, error: parseError.message });
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON in request body',
+        success: false,
+        requestId
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { projectId, prompt, isInitial } = validateRequest(requestBody);
+    
+    log('INFO', 'Request validated', { 
+      requestId, 
+      userId: user.id, 
+      projectId, 
+      promptLength: prompt.length, 
+      isInitial 
+    });
+
+    // Check user's usage limits
     const { data: canProceed, error: limitError } = await supabaseClient
       .rpc('check_user_limits', { user_id: user.id });
 
     if (limitError) {
-      console.error('Error checking limits:', limitError);
-      throw new Error('Failed to check usage limits');
+      log('ERROR', 'Failed to check usage limits', { requestId, error: limitError });
+      return new Response(JSON.stringify({ 
+        error: 'Failed to check usage limits',
+        success: false,
+        requestId
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (!canProceed) {
+      log('INFO', 'User limit reached', { requestId, userId: user.id });
       return new Response(JSON.stringify({ 
         error: 'Message limit reached for your plan',
-        success: false
+        success: false,
+        requestId
       }), {
         status: 429,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Parse request body
-    const { projectId, prompt, isInitial = false } = await req.json();
-
-    if (!prompt) {
-      throw new Error('Prompt is required');
-    }
-
-    if (!projectId) {
-      throw new Error('Project ID is required');
-    }
-
-    console.log(`AI generation for user ${user.id}, project ${projectId}:`, { prompt, isInitial });
-
-    // Get project context
+    // Get project
     const { data: project, error: projectError } = await supabaseClient
       .from('projects')
       .select('*')
@@ -73,16 +282,30 @@ serve(async (req) => {
       .single();
 
     if (projectError) {
-      console.error('Project fetch error:', projectError);
-      throw new Error('Project not found or access denied');
+      log('ERROR', 'Project not found or access denied', { 
+        requestId, 
+        projectId, 
+        userId: user.id, 
+        error: projectError 
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Project not found or access denied',
+        success: false,
+        requestId
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Build system context based on project state
-    let systemPrompt = `You are an expert coding assistant that generates modern web applications using React, TypeScript, and Tailwind CSS.
+    log('INFO', 'Project found', { requestId, projectId, projectName: project.name });
+
+    // Build system prompt
+    const systemPrompt = `You are an expert coding assistant that generates modern web applications using React, TypeScript, and Tailwind CSS.
 
 Project Context:
-- Libraries: ${project.libraries.join(', ')}
-- Current State: ${JSON.stringify(project.state, null, 2)}
+- Libraries: ${project.libraries?.join(', ') || 'react, typescript, tailwindcss'}
+- Current State: ${JSON.stringify(project.state || {}, null, 2)}
 
 Your task is to generate or modify code based on the user's request. Always:
 1. Use modern React with TypeScript
@@ -106,46 +329,27 @@ Return your response as a JSON object with this structure:
   "libraries": ["list", "of", "required", "libraries"]
 }`;
 
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        max_completion_tokens: 4000,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-
-    const aiData = await response.json();
+    // Call OpenAI API with retries
+    const aiData = await callOpenAI(prompt, systemPrompt);
     const aiResponse = aiData.choices[0].message.content;
     const tokensUsed = aiData.usage?.total_tokens || 0;
-
-    console.log('AI response received, tokens used:', tokensUsed);
 
     // Parse AI response
     let parsedResponse;
     try {
       parsedResponse = JSON.parse(aiResponse);
+      log('INFO', 'AI response parsed successfully', { requestId, tokensUsed });
     } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
+      log('ERROR', 'Failed to parse AI response', { requestId, error: parseError.message, aiResponse });
       // Fallback response
       parsedResponse = {
-        components: [],
-        explanation: aiResponse,
-        libraries: project.libraries
+        components: [{
+          name: 'GeneratedComponent',
+          code: `// Generated from prompt: ${prompt}\n${aiResponse}`,
+          type: 'component'
+        }],
+        explanation: 'AI response could not be parsed as JSON, returning as component code',
+        libraries: project.libraries || ['react', 'typescript', 'tailwindcss']
       };
     }
 
@@ -163,14 +367,15 @@ Return your response as a JSON object with this structure:
       .single();
 
     if (promptError) {
-      console.error('Failed to save prompt:', promptError);
+      log('ERROR', 'Failed to save prompt', { requestId, error: promptError });
+      // Don't fail the request, just log the error
     }
 
     // Update project state
     const newState = {
       ...project.state,
       components: parsedResponse.components || [],
-      libraries: parsedResponse.libraries || project.libraries,
+      libraries: parsedResponse.libraries || project.libraries || ['react', 'typescript', 'tailwindcss'],
       lastModified: new Date().toISOString()
     };
 
@@ -178,12 +383,13 @@ Return your response as a JSON object with this structure:
       .from('projects')
       .update({ 
         state: newState,
-        libraries: parsedResponse.libraries || project.libraries
+        libraries: parsedResponse.libraries || project.libraries || ['react', 'typescript', 'tailwindcss']
       })
       .eq('id', projectId);
 
     if (updateError) {
-      console.error('Failed to update project:', updateError);
+      log('ERROR', 'Failed to update project', { requestId, error: updateError });
+      // Don't fail the request, just log the error
     }
 
     // Create snapshot
@@ -206,7 +412,8 @@ Return your response as a JSON object with this structure:
       });
 
     if (snapshotError) {
-      console.error('Failed to create snapshot:', snapshotError);
+      log('ERROR', 'Failed to create snapshot', { requestId, error: snapshotError });
+      // Don't fail the request, just log the error
     }
 
     // Increment usage counters
@@ -217,23 +424,43 @@ Return your response as a JSON object with this structure:
       });
 
     if (usageError) {
-      console.error('Failed to increment usage:', usageError);
+      log('ERROR', 'Failed to increment usage', { requestId, error: usageError });
+      // Don't fail the request, just log the error
     }
 
-    return new Response(JSON.stringify({
+    const response = {
       success: true,
       response: parsedResponse,
       version: nextVersion,
-      tokensUsed
-    }), {
+      tokensUsed,
+      requestId
+    };
+
+    log('INFO', 'Request completed successfully', { 
+      requestId, 
+      userId: user.id, 
+      projectId, 
+      tokensUsed, 
+      version: nextVersion 
+    });
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in ai-generate function:', error);
+    log('ERROR', 'Unhandled error in ai-generate function', { 
+      requestId, 
+      error: error.message, 
+      stack: error.stack 
+    });
+    
     return new Response(JSON.stringify({ 
-      error: error.message,
-      success: false
+      error: error.message || 'Internal server error',
+      success: false,
+      requestId,
+      timestamp: new Date().toISOString()
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
