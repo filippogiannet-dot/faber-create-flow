@@ -8,8 +8,8 @@ All colors MUST be HSL. */
 @layer base {
   :root {
     /* Dark theme primary colors - Apple-inspired */
-    --background: 222 47% 8%;
-    --foreground: 217 91% 95%;
+    --background: 0 0% 0%;
+    --foreground: 217 91% 100%;
 
     --card: 222 43% 11%;
     --card-foreground: 217 91% 95%;
@@ -47,34 +47,10 @@ All colors MUST be HSL. */
     --faber-text-primary: 217 91% 95%;
     --faber-text-secondary: 217 91% 85%;
 
-    /* Gradients - Enhanced Chromatic Apple/Bolt Style */
+    /* Gradients - Apple Style */
     --gradient-hero: linear-gradient(135deg, 
-      hsl(222, 47%, 8%) 0%, 
-      hsl(230, 70%, 6%) 4%, 
-      hsl(225, 60%, 9%) 8%, 
-      hsl(210, 80%, 7%) 12%, 
-      hsl(217, 91%, 10%) 16%, 
-      hsl(240, 60%, 8%) 20%, 
-      hsl(220, 55%, 9%) 24%, 
-      hsl(200, 75%, 6%) 28%, 
-      hsl(215, 85%, 11%) 32%, 
-      hsl(235, 65%, 8%) 36%, 
-      hsl(217, 91%, 12%) 40%, 
-      hsl(205, 80%, 9%) 44%, 
-      hsl(222, 43%, 10%) 48%, 
-      hsl(245, 70%, 8%) 52%, 
-      hsl(218, 88%, 13%) 56%, 
-      hsl(195, 85%, 9%) 60%, 
-      hsl(220, 50%, 11%) 64%, 
-      hsl(250, 75%, 10%) 68%, 
-      hsl(217, 91%, 12%) 72%, 
-      hsl(190, 80%, 8%) 76%, 
-      hsl(215, 82%, 11%) 80%, 
-      hsl(240, 65%, 10%) 84%, 
-      hsl(222, 48%, 12%) 88%, 
-      hsl(185, 90%, 9%) 92%, 
-      hsl(217, 91%, 13%) 96%, 
-      hsl(220, 45%, 11%) 100%);
+      hsl(0, 0%, 0%) 0%, 
+      hsl(0, 0%, 0%) 100%);
     
     --gradient-card: linear-gradient(135deg, 
       hsl(222, 43%, 11%) 0%, 
@@ -145,13 +121,16 @@ All colors MUST be HSL. */
       hsl(217, 91%, 60%) 100%);
     
     --chrome-text: linear-gradient(135deg, 
-      hsl(210, 40%, 100%) 0%, 
-      hsl(217, 91%, 95%) 20%, 
-      hsl(210, 40%, 98%) 35%, 
-      hsl(217, 91%, 90%) 50%, 
-      hsl(210, 40%, 100%) 65%, 
-      hsl(217, 91%, 85%) 80%, 
-      hsl(210, 40%, 100%) 100%);
+      hsl(217, 100%, 70%) 0%, 
+      hsl(280, 100%, 70%) 25%, 
+      hsl(217, 100%, 80%) 50%, 
+      hsl(280, 100%, 80%) 75%, 
+      hsl(217, 100%, 70%) 100%);
+    
+    /* Apple Intelligence Style Text */
+    --apple-text: linear-gradient(135deg, 
+      hsl(217, 100%, 75%) 0%, 
+      hsl(280, 100%, 75%) 100%);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -189,11 +168,11 @@ All colors MUST be HSL. */
 
   /* Apple Chrome Text Effects */
   .chrome-text {
-    background: var(--chrome-text);
+    background: var(--apple-text);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 18px hsl(217 91% 70% / 0.5), 0 0 32px hsl(217 91% 60% / 0.35);
+    text-shadow: 0 0 20px hsl(217 100% 70% / 0.6), 0 0 40px hsl(280 100% 70% / 0.4);
   }
 
   .chrome-bg {
