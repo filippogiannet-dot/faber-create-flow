@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import Navbar from "@/components/Navbar";
 
 export default function Talenti() {
   const { toast } = useToast();
@@ -27,7 +28,9 @@ export default function Talenti() {
   };
 
   return (
-    <main className="min-h-screen pt-24 px-6">
+    <>
+      <Navbar />
+      <main className="min-h-screen pt-24 px-6">
       <section className="max-w-4xl mx-auto space-y-8">
         <header className="text-center">
           <h1 className="text-section-title font-bold chrome-text">Entra nel team Faber</h1>
@@ -83,5 +86,6 @@ export default function Talenti() {
         </Card>
       </section>
     </main>
+    </>
   );
 }

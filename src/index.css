@@ -150,6 +150,17 @@ All colors MUST be HSL. */
   }
 }
 
+/* Hide editor overlay boxes */
+.gpt-selected-tooltip { 
+  display: none !important; 
+  opacity: 0 !important; 
+  visibility: hidden !important; 
+}
+[data-lov-selected="true"] { 
+  outline: none !important; 
+  box-shadow: none !important; 
+}
+
 /* Custom animations and chrome effects */
 @layer utilities {
   .animate-fade-in {
