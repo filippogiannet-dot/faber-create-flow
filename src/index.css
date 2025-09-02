@@ -9,43 +9,43 @@ All colors MUST be HSL. */
   :root {
     /* Dark theme primary colors - Apple-inspired */
     --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
+    --foreground: 210 40% 100%;
 
     --card: 222 43% 11%;
-    --card-foreground: 210 40% 98%;
+    --card-foreground: 210 40% 100%;
 
     --popover: 222 43% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover-foreground: 210 40% 100%;
 
-    --primary: 217 91% 60%;
+    --primary: 217 91% 75%;
     --primary-foreground: 222 47% 8%;
 
     --secondary: 222 43% 15%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary-foreground: 210 40% 100%;
 
     --muted: 222 43% 15%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 20% 85%;
 
-    --accent: 217 91% 60%;
+    --accent: 217 91% 75%;
     --accent-foreground: 222 47% 8%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 210 40% 100%;
 
     --border: 222 43% 15%;
     --input: 222 43% 15%;
-    --ring: 217 91% 60%;
+    --ring: 217 91% 75%;
 
     --radius: 0.75rem;
 
-    /* Faber Brand Colors */
-    --faber-blue: 217 91% 60%;
-    --faber-blue-light: 217 91% 70%;
-    --faber-blue-dark: 217 91% 50%;
+    /* Faber Brand Colors - Enhanced Brightness */
+    --faber-blue: 217 91% 75%;
+    --faber-blue-light: 217 91% 85%;
+    --faber-blue-dark: 217 91% 65%;
     --faber-surface: 222 43% 11%;
     --faber-surface-light: 222 43% 15%;
-    --faber-text-primary: 210 40% 98%;
-    --faber-text-secondary: 215 20% 65%;
+    --faber-text-primary: 210 40% 100%;
+    --faber-text-secondary: 215 20% 90%;
 
     /* Gradients - Enhanced Chromatic Apple/Bolt Style */
     --gradient-hero: linear-gradient(135deg, 
@@ -133,13 +133,13 @@ All colors MUST be HSL. */
       hsl(217, 91%, 60%) 100%);
     
     --chrome-text: linear-gradient(135deg, 
-      hsl(210, 40%, 98%) 0%, 
-      hsl(217, 91%, 88%) 20%, 
-      hsl(210, 40%, 95%) 35%, 
-      hsl(217, 91%, 82%) 50%, 
-      hsl(210, 40%, 97%) 65%, 
-      hsl(217, 91%, 75%) 80%, 
-      hsl(210, 40%, 98%) 100%);
+      hsl(210, 40%, 100%) 0%, 
+      hsl(217, 91%, 95%) 20%, 
+      hsl(210, 40%, 98%) 35%, 
+      hsl(217, 91%, 90%) 50%, 
+      hsl(210, 40%, 100%) 65%, 
+      hsl(217, 91%, 85%) 80%, 
+      hsl(210, 40%, 100%) 100%);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
