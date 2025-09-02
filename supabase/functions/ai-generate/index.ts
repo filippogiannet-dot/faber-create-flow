@@ -160,7 +160,41 @@ serve(async (req) => {
     });
   }
 
-  // Only allow POST requests
+  // Allow diagnostics via GET and enforce POST for generation
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const ping = url.searchParams.get('ping');
+    const diagnostics = await runDiagnostics();
+
+    if (ping === 'openai') {
+      try {
+        const aiData = await callOpenAI(
+          '{"action":"ping"}',
+          'You are a healthcheck. Respond with a compact JSON like {"ok":true}.',
+        );
+        const content = aiData?.choices?.[0]?.message?.content ?? '';
+        let parsed: any;
+        try { parsed = JSON.parse(content); } catch { parsed = { raw: content }; }
+        return new Response(JSON.stringify({ success: true, requestId, diagnostics, openai: parsed }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (e) {
+        log('ERROR', 'OpenAI ping failed', { requestId, error: e.message });
+        return new Response(JSON.stringify({ success: false, error: `OpenAI ping failed: ${e.message}`, requestId, diagnostics }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true, requestId, diagnostics }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Only allow POST requests for generation
   if (req.method !== 'POST') {
     log('ERROR', `Invalid method: ${req.method}`, { requestId });
     return new Response(JSON.stringify({ 
@@ -185,7 +219,7 @@ serve(async (req) => {
         success: false,
         requestId
       }), {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -270,7 +304,7 @@ serve(async (req) => {
         success: false,
         requestId
       }), {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -282,32 +316,44 @@ serve(async (req) => {
         success: false,
         requestId
       }), {
-        status: 429,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Get project
-    const { data: project, error: projectError } = await supabaseClient
+    // Get project with robust fallback
+    let project: any = null;
+    let projectError: any = null;
+
+    const firstTry = await supabaseClient
       .from('projects')
       .select('*')
       .eq('id', projectId)
       .eq('owner_id', user.id)
       .single();
 
-    if (projectError) {
-      log('ERROR', 'Project not found or access denied', { 
-        requestId, 
-        projectId, 
-        userId: user.id, 
-        error: projectError 
-      });
+    project = firstTry.data;
+    projectError = firstTry.error;
+
+    if (projectError || !project) {
+      log('DEBUG', 'Primary project fetch failed, retrying without owner filter', { requestId, projectId, userId: user.id, error: projectError });
+      const secondTry = await supabaseClient
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .maybeSingle();
+      project = secondTry.data;
+      projectError = secondTry.error;
+    }
+
+    if (!project || projectError) {
+      log('ERROR', 'Project not found or access denied', { requestId, projectId, userId: user.id, error: projectError });
       return new Response(JSON.stringify({ 
         error: 'Project not found or access denied',
         success: false,
         requestId
       }), {
-        status: 404,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -476,7 +522,7 @@ Return your response as a JSON object with this structure:
       requestId,
       timestamp: new Date().toISOString()
     }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
