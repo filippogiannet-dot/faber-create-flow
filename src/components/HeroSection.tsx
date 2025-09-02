@@ -24,7 +24,7 @@ const HeroSection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero relative overflow-hidden flex flex-col items-center justify-center pt-16">
+    <div className="min-h-screen bg-gradient-hero relative overflow-hidden flex flex-col items-center justify-center pt-32">
       {/* Background Planet Effect */}
       <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] bg-gradient-planet pointer-events-none opacity-60" />
       <div className="absolute inset-0 chrome-bg opacity-5 pointer-events-none" />
@@ -82,7 +82,7 @@ const HeroSection = () => {
         </div>
 
         {/* Import Options */}
-        <div className="text-center">
+        <div className="text-center mb-16">
           <p className="text-sm text-muted-foreground mb-4">oppure importa da</p>
           <div className="flex items-center justify-center space-x-8">
             <Button variant="ghost" size="sm" className="text-sm text-muted-foreground hover:text-foreground transition-all duration-300 flex items-center space-x-2">
@@ -98,6 +98,18 @@ const HeroSection = () => {
               <span>GitHub</span>
             </Button>
           </div>
+        </div>
+
+        {/* Italian AI Assistant Section */}
+        <div className="text-center max-w-3xl mx-auto animate-fade-in">
+          <h2 className="text-2xl font-semibold chrome-text mb-4">
+            Il primo assistente AI italiano per il coding
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Faber è più veloce, più intelligente e più conveniente rispetto agli altri strumenti sul mercato. 
+            Progettato specificamente per sviluppatori italiani che vogliono creare applicazioni straordinarie 
+            con la potenza dell'intelligenza artificiale.
+          </p>
         </div>
       </div>
     </div>
