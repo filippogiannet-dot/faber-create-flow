@@ -60,23 +60,23 @@ const Pricing = () => {
         <div className="max-w-7xl mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
+            <h1 className="text-section-title font-bold chrome-text mb-6">
               Scegli il tuo{" "}
-              <span className="bg-gradient-to-r from-faber-blue to-faber-blue-light bg-clip-text text-transparent">
+              <span className="chrome-text">
                 piano
               </span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-subtitle text-muted-foreground max-w-2xl mx-auto">
               Inizia gratis e scala con le tue esigenze. Tutti i piani includono accesso completo alla piattaforma.
             </p>
           </div>
 
           {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {plans.map((plan, index) => (
               <Card 
                 key={plan.name} 
-                className={`relative bg-gradient-card border-border transition-all duration-300 hover:shadow-faber-card hover:scale-105 ${
+                 className={`relative bg-gradient-card border-border transition-all duration-300 hover:shadow-faber-card hover:scale-[1.02] ${
                   plan.popular ? 'ring-2 ring-primary shadow-faber-glow' : ''
                 }`}
               >
@@ -88,19 +88,19 @@ const Pricing = () => {
                   </div>
                 )}
                 
-                <CardHeader className="text-center pb-8">
-                  <CardTitle className="text-2xl font-bold text-foreground mb-2">
+                <CardHeader className="text-center pb-6">
+                  <CardTitle className="text-xl font-bold text-foreground mb-2">
                     {plan.name}
                   </CardTitle>
-                  <CardDescription className="text-muted-foreground mb-4">
+                  <CardDescription className="text-sm text-muted-foreground mb-4">
                     {plan.description}
                   </CardDescription>
                   <div className="mb-4">
-                    <span className="text-4xl md:text-5xl font-bold text-foreground">
+                    <span className="text-3xl md:text-4xl font-bold text-foreground">
                       {plan.price}
                     </span>
                     {plan.period && (
-                      <span className="text-muted-foreground ml-1">
+                      <span className="text-sm text-muted-foreground ml-1">
                         {plan.period}
                       </span>
                     )}
@@ -108,21 +108,21 @@ const Pricing = () => {
                 </CardHeader>
 
                 <CardContent>
-                  <ul className="space-y-4 mb-8">
+                  <ul className="space-y-3 mb-6">
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start">
-                        <Check className="w-5 h-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
-                        <span className="text-card-foreground">{feature}</span>
+                        <Check className="w-4 h-4 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                        <span className="text-sm text-card-foreground">{feature}</span>
                       </li>
                     ))}
                   </ul>
 
                   <Button 
-                    className={`w-full ${
+                    className={`w-full text-sm ${
                       plan.popular 
                         ? 'bg-gradient-button hover:shadow-faber-button' 
                         : 'bg-faber-surface-light hover:bg-faber-surface text-foreground border border-border'
-                    } transition-all duration-300 transform hover:scale-105`}
+                    } transition-all duration-300 transform hover:scale-[1.02]`}
                     size="lg"
                   >
                     {plan.name === 'Enterprise' ? 'Contatta il team' : 'Inizia ora'}
@@ -134,7 +134,7 @@ const Pricing = () => {
 
           {/* FAQ or additional info could go here */}
           <div className="text-center mt-16">
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Hai domande? <a href="mailto:support@faber.ai" className="text-primary hover:underline">Contattaci</a>
             </p>
           </div>

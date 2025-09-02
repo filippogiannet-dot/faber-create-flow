@@ -2,12 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Faber Design System - Inspired by Lovable/Bolt
+/* Faber Design System - Apple-inspired with Chrome Effects
 All colors MUST be HSL. */
 
 @layer base {
   :root {
-    /* Dark theme primary colors - similar to Bolt */
+    /* Dark theme primary colors - Apple-inspired */
     --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 
@@ -57,6 +57,23 @@ All colors MUST be HSL. */
     --shadow-glow: 0 0 40px hsl(217 91% 60% / 0.3);
     --shadow-card: 0 8px 32px hsl(222 47% 4% / 0.4);
     --shadow-button: 0 4px 16px hsl(217 91% 60% / 0.3);
+    --shadow-chrome: 0 0 20px hsl(217 91% 60% / 0.2);
+
+    /* Apple Chrome Effects */
+    --chrome-gradient: linear-gradient(135deg, 
+      hsl(217, 91%, 70%) 0%, 
+      hsl(217, 91%, 60%) 20%, 
+      hsl(217, 91%, 65%) 40%, 
+      hsl(217, 91%, 55%) 60%, 
+      hsl(217, 91%, 70%) 80%, 
+      hsl(217, 91%, 60%) 100%);
+    
+    --chrome-text: linear-gradient(135deg, 
+      hsl(210, 40%, 98%) 0%, 
+      hsl(217, 91%, 85%) 25%, 
+      hsl(210, 40%, 95%) 50%, 
+      hsl(217, 91%, 75%) 75%, 
+      hsl(210, 40%, 98%) 100%);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -70,12 +87,15 @@ All colors MUST be HSL. */
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Custom animations inspired by Lovable/Bolt */
+/* Custom animations and chrome effects */
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.6s ease-out;
@@ -87,6 +107,41 @@ All colors MUST be HSL. */
   
   .animate-slide-up {
     animation: slideUp 0.5s ease-out;
+  }
+
+  /* Apple Chrome Text Effects */
+  .chrome-text {
+    background: var(--chrome-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 10px hsl(217 91% 60% / 0.3);
+  }
+
+  .chrome-bg {
+    background: var(--chrome-gradient);
+    box-shadow: var(--shadow-chrome);
+  }
+
+  /* Text size adjustments for elegance */
+  .text-hero {
+    @apply text-4xl md:text-6xl;
+  }
+  
+  .text-section-title {
+    @apply text-3xl md:text-5xl;
+  }
+  
+  .text-nav {
+    @apply text-sm;
+  }
+  
+  .text-body {
+    @apply text-base md:text-lg;
+  }
+  
+  .text-subtitle {
+    @apply text-lg md:text-xl;
   }
 }
 

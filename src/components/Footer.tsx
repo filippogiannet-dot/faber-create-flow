@@ -7,7 +7,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="md:col-span-1">
-            <div className="text-2xl font-bold text-foreground mb-4">Faber</div>
+            <div className="text-xl font-bold chrome-text mb-4">Faber</div>
             <p className="text-sm text-muted-foreground">
               © 2025 Faber - All rights reserved.
             </p>
@@ -15,8 +15,8 @@ const Footer = () => {
 
           {/* Resources */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground mb-4">Resources</h3>
-            <ul className="space-y-3">
+            <h3 className="text-sm font-semibold chrome-text mb-4">Resources</h3>
+            <ul className="space-y-2">
               <li>
                 <Link to="/support" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Support
@@ -42,8 +42,8 @@ const Footer = () => {
 
           {/* Company */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground mb-4">Company</h3>
-            <ul className="space-y-3">
+            <h3 className="text-sm font-semibold chrome-text mb-4">Company</h3>
+            <ul className="space-y-2">
               <li>
                 <Link to="/careers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Careers
@@ -64,8 +64,8 @@ const Footer = () => {
 
           {/* Social */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground mb-4">Social</h3>
-            <ul className="space-y-3">
+            <h3 className="text-sm font-semibold chrome-text mb-4">Social</h3>
+            <ul className="space-y-2">
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Discord

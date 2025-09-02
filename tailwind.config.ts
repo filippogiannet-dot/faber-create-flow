@@ -67,12 +67,15 @@ export default {
 				'gradient-hero': 'var(--gradient-hero)',
 				'gradient-card': 'var(--gradient-card)',
 				'gradient-button': 'var(--gradient-button)',
-				'gradient-planet': 'var(--gradient-planet)'
+				'gradient-planet': 'var(--gradient-planet)',
+				'chrome-gradient': 'var(--chrome-gradient)',
+				'chrome-text': 'var(--chrome-text)'
 			},
 			boxShadow: {
 				'faber-glow': 'var(--shadow-glow)',
 				'faber-card': 'var(--shadow-card)',
-				'faber-button': 'var(--shadow-button)'
+				'faber-button': 'var(--shadow-button)',
+				'chrome': 'var(--shadow-chrome)'
 			},
 			transitionTimingFunction: {
 				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
