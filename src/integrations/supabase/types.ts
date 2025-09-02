@@ -14,16 +14,172 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          messages_limit: number | null
+          messages_used: number | null
+          plan: Database["public"]["Enums"]["user_plan"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          messages_limit?: number | null
+          messages_used?: number | null
+          plan?: Database["public"]["Enums"]["user_plan"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          messages_limit?: number | null
+          messages_used?: number | null
+          plan?: Database["public"]["Enums"]["user_plan"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          libraries: string[] | null
+          messages_used: number | null
+          name: string
+          owner_id: string
+          state: Json | null
+          status: Database["public"]["Enums"]["project_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          libraries?: string[] | null
+          messages_used?: number | null
+          name: string
+          owner_id: string
+          state?: Json | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          libraries?: string[] | null
+          messages_used?: number | null
+          name?: string
+          owner_id?: string
+          state?: Json | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          ai_response: Json | null
+          created_at: string | null
+          id: string
+          project_id: string
+          prompt_text: string
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          ai_response?: Json | null
+          created_at?: string | null
+          id?: string
+          project_id: string
+          prompt_text: string
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          ai_response?: Json | null
+          created_at?: string | null
+          id?: string
+          project_id?: string
+          prompt_text?: string
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snapshots: {
+        Row: {
+          created_at: string | null
+          id: string
+          project_id: string
+          prompt_id: string | null
+          state: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          project_id: string
+          prompt_id?: string | null
+          state: Json
+          version: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          project_id?: string
+          prompt_id?: string | null
+          state?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snapshots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "snapshots_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_user_limits: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      increment_usage: {
+        Args: { project_id?: string; user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      project_status: "active" | "archived" | "deleted"
+      user_plan: "free" | "pro" | "enterprise"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +306,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      project_status: ["active", "archived", "deleted"],
+      user_plan: ["free", "pro", "enterprise"],
+    },
   },
 } as const
