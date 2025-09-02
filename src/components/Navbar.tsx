@@ -30,7 +30,7 @@ const Navbar = () => {
             Supporto
           </Link>
           <Link 
-            to="/piani" 
+            to="/pricing" 
             className="text-nav text-muted-foreground hover:text-foreground chrome-text transition-all duration-300"
           >
             Piani

@@ -26,10 +26,11 @@ const HeroSection = () => {
   return (
     <div className="min-h-screen bg-gradient-hero relative overflow-hidden flex flex-col items-center justify-center pt-40">
       {/* Enhanced Background Effects */}
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] bg-gradient-planet pointer-events-none opacity-70" />
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-accent pointer-events-none opacity-30" />
-      <div className="absolute inset-0 bg-gradient-mesh pointer-events-none opacity-10" />
-      <div className="absolute inset-0 chrome-bg opacity-8 pointer-events-none" />
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] bg-gradient-planet pointer-events-none opacity-80" />
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-accent pointer-events-none opacity-40" />
+      <div className="absolute inset-0 bg-gradient-mesh pointer-events-none opacity-15" />
+      <div className="absolute inset-0 chrome-bg opacity-[0.16] pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--background)/0)_0%,hsl(var(--background)/.6)_60%,hsl(var(--background)/.9)_100%)]" />
       
       {/* Floating Orbs for Additional Depth */}
       <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -46,7 +47,7 @@ const HeroSection = () => {
               creare oggi?
             </span>
           </h1>
-          <p className="text-subtitle text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="text-subtitle text-foreground/90 max-w-2xl mx-auto leading-relaxed">
             Crea app e siti web straordinari chattando con l'AI.
           </p>
         </div>
@@ -112,7 +113,7 @@ const HeroSection = () => {
           <h2 className="text-2xl font-semibold chrome-text mb-4">
             Il primo assistente AI italiano per il coding
           </h2>
-          <p className="text-muted-foreground leading-relaxed">
+          <p className="text-foreground/80 leading-relaxed">
             Faber è più veloce, più intelligente e più conveniente rispetto agli altri strumenti sul mercato. 
             Progettato specificamente per sviluppatori italiani che vogliono creare applicazioni straordinarie 
             con la potenza dell'intelligenza artificiale.
