@@ -1,42 +1,115 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/");
+      }
+    };
+    checkUser();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Placeholder login logic
-    setTimeout(() => {
+    console.log("Login attempt:", { email, password });
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Errore di accesso",
+          description: error.message === "Invalid login credentials" 
+            ? "Email o password non corretti" 
+            : error.message,
+        });
+      } else if (data.user) {
+        toast({
+          title: "Accesso effettuato",
+          description: "Benvenuto in Faber!",
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Si è verificato un errore durante l'accesso",
+      });
+    } finally {
       setIsLoading(false);
-      console.log("Login attempt:", { email, password });
-    }, 1000);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Le password non coincidono");
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Le password non coincidono",
+      });
       return;
     }
     
     setIsLoading(true);
     
-    // Placeholder signup logic
-    setTimeout(() => {
+    console.log("Signup attempt:", { email, password });
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Errore di registrazione",
+          description: error.message,
+        });
+      } else if (data.user) {
+        toast({
+          title: "Registrazione completata",
+          description: "Controlla la tua email per confermare l'account",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Si è verificato un errore durante la registrazione",
+      });
+    } finally {
       setIsLoading(false);
-      console.log("Signup attempt:", { email, password });
-    }, 1000);
+    }
   };
 
   return (
