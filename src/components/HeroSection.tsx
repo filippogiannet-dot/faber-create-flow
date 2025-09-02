@@ -3,24 +3,98 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { Paperclip, Sparkles } from "lucide-react";
+import { useAuth } from "@/integrations/supabase/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const HeroSection = () => {
   const [prompt, setPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
+  const { user, session } = useAuth();
+  const { toast } = useToast();
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
     
-    // Check if user is logged in (placeholder logic)
-    const isLoggedIn = false; // This would come from auth context
-    
-    if (!isLoggedIn) {
+    // Check if user is logged in using real auth context
+    if (!user || !session) {
       navigate('/auth');
       return;
     }
     
-    // Handle generation logic here
-    console.log("Generating with prompt:", prompt);
+    setIsGenerating(true);
+    
+    try {
+      // First, create a new project
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          name: `App: ${prompt.slice(0, 50)}...`,
+          description: prompt,
+          owner_id: user.id,
+          state: { isNew: true },
+          libraries: ['react', 'typescript', 'tailwindcss']
+        })
+        .select()
+        .single();
+
+      if (projectError) {
+        console.error('Project creation error:', projectError);
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: "Impossibile creare il progetto",
+        });
+        return;
+      }
+
+      console.log("Project created:", project.id);
+
+      // Call the AI generation function
+      const { data: result, error: genError } = await supabase.functions.invoke('ai-generate', {
+        body: {
+          projectId: project.id,
+          prompt: prompt,
+          isInitial: true
+        }
+      });
+
+      if (genError) {
+        console.error('Generation error:', genError);
+        toast({
+          variant: "destructive",
+          title: "Errore di generazione",
+          description: genError.message || "Errore durante la generazione",
+        });
+        return;
+      }
+
+      if (result.success) {
+        toast({
+          title: "App generata con successo!",
+          description: "La tua applicazione è stata creata",
+        });
+        
+        // TODO: Navigate to project view or display results
+        console.log("Generation successful:", result);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: result.error || "Generazione fallita",
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Si è verificato un errore imprevisto",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -75,11 +149,11 @@ const HeroSection = () => {
               
               <Button 
                 onClick={handleGenerate}
-                disabled={!prompt.trim()}
+                disabled={!prompt.trim() || isGenerating}
                 className="text-sm bg-gradient-button hover:shadow-faber-button transition-all duration-300 transform hover:scale-105"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                Genera
+                {isGenerating ? "Generazione in corso..." : "Genera"}
               </Button>
             </div>
           </div>
