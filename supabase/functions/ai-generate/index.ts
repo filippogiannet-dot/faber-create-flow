@@ -3,8 +3,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
 // Configuration
@@ -45,6 +47,7 @@ async function runDiagnostics() {
 // Enhanced OpenAI API call with retries
 async function callOpenAI(prompt: string, systemPrompt: string, retryCount = 0): Promise<any> {
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  const openAIModel = Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini';
   
   if (!openAIApiKey) {
     throw new Error('OPENAI_API_KEY environment variable is not set');
@@ -53,7 +56,8 @@ async function callOpenAI(prompt: string, systemPrompt: string, retryCount = 0):
   try {
     log('DEBUG', `OpenAI API call attempt ${retryCount + 1}`, { 
       promptLength: prompt.length,
-      systemPromptLength: systemPrompt.length 
+      systemPromptLength: systemPrompt.length,
+      model: openAIModel
     });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -63,12 +67,14 @@ async function callOpenAI(prompt: string, systemPrompt: string, retryCount = 0):
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: openAIModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 4000,
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 2000,
       }),
     });
 
@@ -145,10 +151,13 @@ serve(async (req) => {
     userAgent: req.headers.get('user-agent') 
   });
 
-  // Handle CORS preflight requests
+// Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     log('DEBUG', 'CORS preflight request', { requestId });
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    });
   }
 
   // Only allow POST requests
@@ -182,13 +191,18 @@ serve(async (req) => {
     }
 
     // Create Supabase client
+    const authHeader = req.headers.get('Authorization');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      {
+        global: {
+          headers: authHeader ? { Authorization: authHeader } : {}
+        }
+      }
     );
 
     // Validate authentication
-    const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       log('ERROR', 'No authorization header', { requestId });
       return new Response(JSON.stringify({ 
