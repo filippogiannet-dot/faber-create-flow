@@ -1,1 +1,21 @@
 project_id = "rzbtrvceflkvrhphbksx"
+
+[auth]
+enabled = true
+# The base URL of your website
+site_url = "https://rzbtrvceflkvrhphbksx.supabase.co"
+
+[edge-runtime]
+policy = "per_worker"
+
+[functions.create-project]
+verify_jwt = true
+
+[functions.get-projects]
+verify_jwt = true
+
+[functions.ai-generate]
+verify_jwt = true
+
+[functions.get-usage]
+verify_jwt = true
