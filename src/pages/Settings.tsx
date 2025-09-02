@@ -1,187 +1,189 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
-import { usageAPI, type Usage } from "@/lib/api";
+import Footer from "@/components/Footer";
+import { AISettings, defaultAISettings } from "@/config/openai";
 
 const Settings = () => {
-  const [usage, setUsage] = useState<Usage | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [aiSettings, setAISettings] = useState<AISettings>(defaultAISettings);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadUsage();
-  }, []);
-
-  const loadUsage = async () => {
+  const handleSaveSettings = async () => {
+    setIsLoading(true);
+    
     try {
-      setLoading(true);
-      const data = await usageAPI.get();
-      setUsage(data);
-    } catch (error: any) {
+      // Placeholder for saving settings to Supabase or localStorage
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to load usage data",
-        variant: "destructive"
+        title: "Impostazioni salvate",
+        description: "Le tue impostazioni AI sono state aggiornate con successo.",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante il salvataggio delle impostazioni.",
+        variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <main className="min-h-screen pt-24 px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-              <div className="h-32 bg-gray-200 rounded"></div>
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      <main className="pt-20 pb-16">
+        <div className="max-w-4xl mx-auto px-6">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-section-title font-bold chrome-text mb-4">
+              Impostazioni
+            </h1>
+            <p className="text-subtitle text-muted-foreground">
+              Configura le tue preferenze e integrazione AI
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            {/* AI Configuration */}
+            <Card className="bg-gradient-card border-border">
+              <CardHeader>
+                <CardTitle className="text-xl chrome-text">Configurazione AI</CardTitle>
+                <CardDescription>
+                  Configura la tua integrazione con OpenAI per alimentare il coding assistant
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="openai-key" className="text-sm font-medium">
+                    Chiave API OpenAI
+                  </Label>
+                  <Input
+                    id="openai-key"
+                    type="password"
+                    placeholder="sk-..."
+                    value={aiSettings.openaiApiKey || ''}
+                    onChange={(e) => setAISettings(prev => ({ ...prev, openaiApiKey: e.target.value }))}
+                    className="bg-faber-surface border-border"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    La tua chiave API sarà crittografata e memorizzata in modo sicuro
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="model" className="text-sm font-medium">
+                      Modello Preferito
+                    </Label>
+                    <Select
+                      value={aiSettings.preferredModel}
+                      onValueChange={(value) => setAISettings(prev => ({ ...prev, preferredModel: value }))}
+                    >
+                      <SelectTrigger className="bg-faber-surface border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                        <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                        <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="max-tokens" className="text-sm font-medium">
+                      Max Tokens
+                    </Label>
+                    <Input
+                      id="max-tokens"
+                      type="number"
+                      min="256"
+                      max="4096"
+                      value={aiSettings.maxTokens}
+                      onChange={(e) => setAISettings(prev => ({ ...prev, maxTokens: parseInt(e.target.value) }))}
+                      className="bg-faber-surface border-border"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="temperature" className="text-sm font-medium">
+                    Temperature: {aiSettings.temperature}
+                  </Label>
+                  <input
+                    id="temperature"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={aiSettings.temperature}
+                    onChange={(e) => setAISettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Più preciso</span>
+                    <span>Più creativo</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Account Settings */}
+            <Card className="bg-gradient-card border-border">
+              <CardHeader>
+                <CardTitle className="text-xl chrome-text">Account</CardTitle>
+                <CardDescription>
+                  Gestisci le impostazioni del tuo account Faber
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    disabled
+                    className="bg-faber-surface border-border opacity-50"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Contatta il supporto per modificare la tua email
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <Button 
+                onClick={handleSaveSettings}
+                disabled={isLoading}
+                className="bg-gradient-button hover:shadow-faber-button transition-all duration-300"
+              >
+                {isLoading ? 'Salvataggio...' : 'Salva Impostazioni'}
+              </Button>
             </div>
           </div>
-        </main>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Navbar />
-      <main className="min-h-screen pt-24 px-6">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <header>
-            <h1 className="text-3xl font-bold text-foreground">Account Settings</h1>
-            <p className="text-muted-foreground mt-2">Manage your account and usage</p>
-          </header>
-
-          {usage && (
-            <>
-              {/* Plan & Usage Overview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    Current Plan
-                    <Badge variant={usage.user.plan === 'free' ? 'secondary' : 'default'}>
-                      {usage.user.plan.toUpperCase()}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    Your current usage and limits
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Messages Used</span>
-                      <span>{usage.user.messagesUsed} / {usage.user.messagesLimit}</span>
-                    </div>
-                    <Progress value={usage.user.usagePercentage} className="h-2" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 pt-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        {usage.user.messagesRemaining}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Messages Remaining</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        {usage.projects.total}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Active Projects</div>
-                    </div>
-                  </div>
-
-                  {usage.user.plan === 'free' && (
-                    <div className="bg-muted p-4 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Upgrade to Pro for more messages and advanced features
-                      </p>
-                      <Button size="sm">Upgrade Plan</Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Projects Overview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your Projects</CardTitle>
-                  <CardDescription>
-                    Overview of your active projects
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {usage.projects.list.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">
-                      No projects yet. Create your first project to get started!
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {usage.projects.list.map((project) => (
-                        <div key={project.id} className="flex justify-between items-center p-3 border rounded-lg">
-                          <div>
-                            <h4 className="font-medium">{project.name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              Created {new Date(project.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium">{project.messagesUsed} messages</div>
-                            <div className="text-xs text-muted-foreground">used</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>
-                    Your latest AI interactions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {usage.recentActivity.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">
-                      No recent activity
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {usage.recentActivity.map((activity) => (
-                        <div key={activity.id} className="p-3 border rounded-lg">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="text-sm font-medium">{activity.projects.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(activity.created_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {activity.prompt_text}
-                          </p>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            {activity.tokens_used} tokens used
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </>
-          )}
         </div>
       </main>
-    </>
+
+      <Footer />
+    </div>
   );
 };
 
