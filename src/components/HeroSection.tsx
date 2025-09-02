@@ -101,7 +101,7 @@ const HeroSection = () => {
         </div>
 
         {/* Italian AI Assistant Section */}
-        <div className="text-center max-w-3xl mx-auto animate-fade-in">
+        <div className="text-center max-w-3xl mx-auto animate-fade-in mb-24">
           <h2 className="text-2xl font-semibold chrome-text mb-4">
             Il primo assistente AI italiano per il coding
           </h2>

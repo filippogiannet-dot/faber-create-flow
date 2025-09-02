@@ -18,16 +18,22 @@ const Navbar = () => {
         {/* Center Navigation */}
         <div className="hidden md:flex items-center space-x-8">
           <Link 
-            to="/careers" 
+            to="/talenti" 
             className="text-nav text-muted-foreground hover:text-foreground chrome-text transition-all duration-300"
           >
-            Careers
+            Talenti
           </Link>
           <Link 
-            to="/pricing" 
+            to="/supporto" 
             className="text-nav text-muted-foreground hover:text-foreground chrome-text transition-all duration-300"
           >
-            Pricing
+            Supporto
+          </Link>
+          <Link 
+            to="/piani" 
+            className="text-nav text-muted-foreground hover:text-foreground chrome-text transition-all duration-300"
+          >
+            Piani
           </Link>
         </div>
 
