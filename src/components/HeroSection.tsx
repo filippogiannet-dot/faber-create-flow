@@ -24,13 +24,9 @@ const HeroSection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero relative overflow-hidden flex flex-col items-center justify-center pt-40">
-      {/* Enhanced Background Effects */}
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] bg-gradient-planet pointer-events-none opacity-80" />
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-accent pointer-events-none opacity-40" />
-      <div className="absolute inset-0 bg-gradient-mesh pointer-events-none opacity-15" />
-      <div className="absolute inset-0 chrome-bg opacity-[0.16] pointer-events-none" />
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--background)/0)_0%,hsl(var(--background)/.6)_60%,hsl(var(--background)/.9)_100%)]" />
+    <div className="min-h-screen bg-black relative overflow-hidden flex flex-col items-center justify-center pt-40">
+      {/* Minimal Background Effects */}
+      <div className="absolute inset-0 bg-black" />
       
       {/* Floating Orbs for Additional Depth */}
       <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/10 rounded-full blur-3xl animate-pulse" />
