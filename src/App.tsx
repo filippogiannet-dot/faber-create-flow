@@ -8,6 +8,7 @@ import Pricing from "./pages/Pricing";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Talenti from "./pages/Talenti";
+import { AuthProvider } from "@/integrations/supabase/AuthProvider";
 
 const queryClient = new QueryClient();
 
@@ -16,16 +17,18 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/talenti" element={<Talenti />} />
-          <Route path="/auth" element={<Auth />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/talenti" element={<Talenti />} />
+            <Route path="/auth" element={<Auth />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
