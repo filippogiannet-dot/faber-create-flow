@@ -24,7 +24,7 @@ const HeroSection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero relative overflow-hidden flex flex-col items-center justify-center pt-32">
+    <div className="min-h-screen bg-gradient-hero relative overflow-hidden flex flex-col items-center justify-center pt-40">
       {/* Background Planet Effect */}
       <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] bg-gradient-planet pointer-events-none opacity-60" />
       <div className="absolute inset-0 chrome-bg opacity-5 pointer-events-none" />

@@ -48,10 +48,25 @@ All colors MUST be HSL. */
     --faber-text-secondary: 215 20% 65%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(222, 47%, 8%) 0%, hsl(222, 43%, 11%) 50%, hsl(217, 91%, 15%) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(222, 43%, 11%) 0%, hsl(222, 43%, 13%) 100%);
-    --gradient-button: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(217, 91%, 70%) 100%);
-    --gradient-planet: radial-gradient(ellipse at bottom, hsl(217, 91%, 20%) 0%, transparent 70%);
+    --gradient-hero: linear-gradient(135deg, 
+      hsl(222, 47%, 8%) 0%, 
+      hsl(222, 43%, 10%) 25%, 
+      hsl(217, 91%, 12%) 50%, 
+      hsl(222, 43%, 11%) 75%, 
+      hsl(217, 91%, 15%) 100%);
+    --gradient-card: linear-gradient(135deg, 
+      hsl(222, 43%, 11%) 0%, 
+      hsl(217, 91%, 12%) 50%, 
+      hsl(222, 43%, 13%) 100%);
+    --gradient-button: linear-gradient(135deg, 
+      hsl(217, 91%, 60%) 0%, 
+      hsl(217, 91%, 65%) 50%, 
+      hsl(217, 91%, 70%) 100%);
+    --gradient-planet: radial-gradient(ellipse at bottom, 
+      hsl(217, 91%, 18%) 0%, 
+      hsl(217, 91%, 20%) 30%, 
+      hsl(217, 91%, 16%) 60%, 
+      transparent 70%);
 
     /* Shadows */
     --shadow-glow: 0 0 40px hsl(217 91% 60% / 0.3);
@@ -62,17 +77,21 @@ All colors MUST be HSL. */
     /* Apple Chrome Effects */
     --chrome-gradient: linear-gradient(135deg, 
       hsl(217, 91%, 70%) 0%, 
-      hsl(217, 91%, 60%) 20%, 
-      hsl(217, 91%, 65%) 40%, 
-      hsl(217, 91%, 55%) 60%, 
-      hsl(217, 91%, 70%) 80%, 
+      hsl(217, 91%, 60%) 15%, 
+      hsl(217, 91%, 65%) 30%, 
+      hsl(217, 91%, 55%) 45%, 
+      hsl(217, 91%, 68%) 60%, 
+      hsl(217, 91%, 58%) 75%, 
+      hsl(217, 91%, 72%) 90%, 
       hsl(217, 91%, 60%) 100%);
     
     --chrome-text: linear-gradient(135deg, 
       hsl(210, 40%, 98%) 0%, 
-      hsl(217, 91%, 85%) 25%, 
-      hsl(210, 40%, 95%) 50%, 
-      hsl(217, 91%, 75%) 75%, 
+      hsl(217, 91%, 88%) 20%, 
+      hsl(210, 40%, 95%) 35%, 
+      hsl(217, 91%, 82%) 50%, 
+      hsl(210, 40%, 97%) 65%, 
+      hsl(217, 91%, 75%) 80%, 
       hsl(210, 40%, 98%) 100%);
 
     /* Animations */
@@ -125,7 +144,7 @@ All colors MUST be HSL. */
 
   /* Text size adjustments for elegance */
   .text-hero {
-    @apply text-4xl md:text-6xl;
+    @apply text-3xl md:text-5xl;
   }
   
   .text-section-title {
