@@ -54,12 +54,12 @@ const HeroSection = () => {
 
         {/* Prompt Box */}
         <div className="relative max-w-4xl mx-auto mb-8 animate-scale-in">
-          <div className="relative bg-faber-surface border border-border rounded-2xl p-1 shadow-faber-card hover:shadow-chrome transition-all duration-300">
+          <div className="relative bg-card border border-border rounded-2xl shadow-card hover:shadow-chrome transition-all duration-300">
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Scrivi la tua idea e la costruiremo insieme..."
-              className="min-h-[100px] bg-transparent border-0 text-body placeholder:text-muted-foreground resize-none focus:ring-0 focus:outline-none p-6"
+              className="min-h-[100px] bg-transparent border-0 text-body placeholder:text-muted-foreground resize-none focus:ring-0 focus:outline-none focus-visible:ring-0 p-6"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
