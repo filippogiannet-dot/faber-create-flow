@@ -25,9 +25,16 @@ const HeroSection = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero relative overflow-hidden flex flex-col items-center justify-center pt-40">
-      {/* Background Planet Effect */}
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] bg-gradient-planet pointer-events-none opacity-60" />
-      <div className="absolute inset-0 chrome-bg opacity-5 pointer-events-none" />
+      {/* Enhanced Background Effects */}
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] bg-gradient-planet pointer-events-none opacity-70" />
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-accent pointer-events-none opacity-30" />
+      <div className="absolute inset-0 bg-gradient-mesh pointer-events-none opacity-10" />
+      <div className="absolute inset-0 chrome-bg opacity-8 pointer-events-none" />
+      
+      {/* Floating Orbs for Additional Depth */}
+      <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-1/3 right-1/4 w-40 h-40 bg-accent/8 rounded-full blur-3xl animate-pulse delay-700" />
+      <div className="absolute top-1/2 right-1/3 w-24 h-24 bg-primary/12 rounded-full blur-2xl animate-pulse delay-1000" />
       
       {/* Content */}
       <div className="relative z-10 w-full max-w-4xl mx-auto px-6 text-center">
