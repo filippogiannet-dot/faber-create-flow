@@ -55,7 +55,7 @@ const HeroSection = () => {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Scrivi la tua idea e la costruiremo insieme..."
-              className="min-h-[100px] bg-transparent border-0 text-body placeholder:text-muted-foreground resize-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none p-6"
+              className="min-h-[100px] bg-transparent border-0 text-body placeholder:text-muted-foreground resize-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none focus:border-transparent focus-visible:border-transparent ring-0 p-6"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
