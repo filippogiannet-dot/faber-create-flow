@@ -486,12 +486,14 @@ Request: "${prompt}"
     // Attempt generation with robust JSON parsing + retries on invalid JSON
     let generatedCode: any = null;
     let lastParseError: any = null;
+    let lastCodeData: any = null;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const attemptPrompt = attempt === 0
         ? codePrompt
         : `${codePrompt}\n\nYour previous output was invalid JSON. Reprint STRICT JSON that conforms EXACTLY to the schema. No prose.`;
 
       const codeData = await callOpenAI(attemptPrompt, systemPrompt);
+      lastCodeData = codeData;
 
       try {
         const rawContent = (codeData?.choices?.[0]?.message?.content ?? '').toString();
@@ -625,7 +627,7 @@ Request: "${prompt}"
           explanation: generatedCode.explanation || 'Code generated successfully',
           files: generatedCode.files
         },
-        tokens_used: codeData.usage?.total_tokens || 0
+        tokens_used: lastCodeData?.usage?.total_tokens || 0
       })
       .select()
       .single();
@@ -675,7 +677,7 @@ Request: "${prompt}"
         files: generatedCode.files
       },
       version: nextVersion,
-      tokensUsed: codeData.usage?.total_tokens || 0,
+      tokensUsed: lastCodeData?.usage?.total_tokens || 0,
       requestId
     };
 
