@@ -156,10 +156,15 @@ const Editor = () => {
             });
 
             if (prompt.ai_response) {
+              const aiResponse = prompt.ai_response as any;
+              const explanation = (typeof aiResponse === 'object' && aiResponse?.explanation) 
+                ? aiResponse.explanation 
+                : 'Aggiornamento del codice generato.';
+              
               messages.push({
                 id: `ai-${prompt.id}`,
                 type: 'ai',
-                content: prompt.ai_response.explanation || 'Aggiornamento del codice generato.',
+                content: explanation,
                 timestamp: new Date(prompt.created_at)
               });
             }
@@ -232,10 +237,15 @@ const Editor = () => {
       if (error) throw error;
 
       if (result.success) {
+        const aiResponse = result.response as any;
+        const explanation = (typeof aiResponse === 'object' && aiResponse?.explanation) 
+          ? aiResponse.explanation 
+          : 'Codice generato con successo!';
+          
         const aiMessage: ChatMessage = {
           id: `ai-${Date.now()}`,
           type: 'ai',
-          content: result.response?.explanation || 'Codice generato con successo!',
+          content: explanation,
           timestamp: new Date(),
           tokens_used: result.tokensUsed
         };
