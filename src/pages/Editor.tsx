@@ -50,6 +50,8 @@ interface Project {
   messages_used: number;
   created_at: string;
   updated_at: string;
+  generation_status?: string;
+  error_message?: string;
 }
 
 interface ProjectFile {
@@ -117,6 +119,86 @@ const Editor = () => {
   // Generate preview HTML from project files
   const generatePreviewHtml = useCallback((files: ProjectFile[]): string => {
     if (!files || files.length === 0) {
+      // Check if project is still generating
+      if (project?.generation_status === 'generating') {
+        return `
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Generazione in corso...</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              @keyframes sparkle {
+                0%, 100% { opacity: 0.3; transform: scale(0.8); }
+                50% { opacity: 1; transform: scale(1.2); }
+              }
+              @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-20px); }
+              }
+              .sparkle { animation: sparkle 2s ease-in-out infinite; }
+              .float { animation: float 3s ease-in-out infinite; }
+              .gradient-bg {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              }
+            </style>
+          </head>
+          <body class="gradient-bg min-h-screen flex items-center justify-center">
+            <div class="text-center text-white p-8">
+              <div class="float mb-8">
+                <div class="w-24 h-24 mx-auto mb-6 relative">
+                  <div class="absolute inset-0 bg-white/20 rounded-full"></div>
+                  <div class="absolute inset-2 bg-white/30 rounded-full sparkle"></div>
+                  <div class="absolute inset-4 bg-white/40 rounded-full"></div>
+                  <div class="absolute inset-6 bg-white/60 rounded-full sparkle" style="animation-delay: 0.5s;"></div>
+                  <div class="absolute inset-8 bg-white/80 rounded-full" style="animation-delay: 1s;"></div>
+                </div>
+              </div>
+              <h1 class="text-4xl font-bold mb-4">✨ Stiamo creando qualcosa di magico ✨</h1>
+              <p class="text-xl text-white/90 mb-6">La tua applicazione sta prendendo vita...</p>
+              <div class="flex justify-center items-center space-x-2">
+                <div class="w-3 h-3 bg-white rounded-full sparkle"></div>
+                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.3s;"></div>
+                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.6s;"></div>
+              </div>
+              <p class="text-sm text-white/70 mt-4">Questo potrebbe richiedere qualche momento...</p>
+            </div>
+          </body>
+          </html>
+        `;
+      }
+
+      // Check if generation failed
+      if (project?.generation_status === 'failed') {
+        return `
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Errore di generazione</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+          </head>
+          <body class="bg-red-50 min-h-screen flex items-center justify-center">
+            <div class="text-center p-8">
+              <div class="w-16 h-16 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 19c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+              </div>
+              <h1 class="text-2xl font-bold text-red-800 mb-4">Errore durante la generazione</h1>
+              <p class="text-red-600 mb-6">${project?.error_message || 'Si è verificato un errore imprevisto'}</p>
+              <button onclick="window.location.reload()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                Riprova
+              </button>
+            </div>
+          </body>
+          </html>
+        `;
+      }
+
       return `
         <!DOCTYPE html>
         <html lang="en">
@@ -133,8 +215,8 @@ const Editor = () => {
           <div id="root">
             <div class="flex items-center justify-center h-screen bg-gray-100">
               <div class="text-center">
-                <h1 class="text-2xl font-bold text-gray-800 mb-4">No Preview Available</h1>
-                <p class="text-gray-600">Generate some code to see the preview</p>
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Nessuna preview disponibile</h1>
+                <p class="text-gray-600">Prova a generare del codice per vedere l'anteprima</p>
               </div>
             </div>
           </div>
@@ -193,6 +275,57 @@ const Editor = () => {
     );
 
     if (!componentFile) {
+      // Check if project is still generating
+      if (project?.generation_status === 'generating') {
+        return `
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Generazione in corso...</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              @keyframes sparkle {
+                0%, 100% { opacity: 0.3; transform: scale(0.8); }
+                50% { opacity: 1; transform: scale(1.2); }
+              }
+              @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-20px); }
+              }
+              .sparkle { animation: sparkle 2s ease-in-out infinite; }
+              .float { animation: float 3s ease-in-out infinite; }
+              .gradient-bg {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              }
+            </style>
+          </head>
+          <body class="gradient-bg min-h-screen flex items-center justify-center">
+            <div class="text-center text-white p-8">
+              <div class="float mb-8">
+                <div class="w-24 h-24 mx-auto mb-6 relative">
+                  <div class="absolute inset-0 bg-white/20 rounded-full"></div>
+                  <div class="absolute inset-2 bg-white/30 rounded-full sparkle"></div>
+                  <div class="absolute inset-4 bg-white/40 rounded-full"></div>
+                  <div class="absolute inset-6 bg-white/60 rounded-full sparkle" style="animation-delay: 0.5s;"></div>
+                  <div class="absolute inset-8 bg-white/80 rounded-full" style="animation-delay: 1s;"></div>
+                </div>
+              </div>
+              <h1 class="text-4xl font-bold mb-4">✨ Stiamo creando qualcosa di magico ✨</h1>
+              <p class="text-xl text-white/90 mb-6">La tua applicazione sta prendendo vita...</p>
+              <div class="flex justify-center items-center space-x-2">
+                <div class="w-3 h-3 bg-white rounded-full sparkle"></div>
+                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.3s;"></div>
+                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.6s;"></div>
+              </div>
+              <p class="text-sm text-white/70 mt-4">Questo potrebbe richiedere qualche momento...</p>
+            </div>
+          </body>
+          </html>
+        `;
+      }
+
       return `
         <!DOCTYPE html>
         <html lang="en">
@@ -209,8 +342,8 @@ const Editor = () => {
           <div id="root">
             <div class="flex items-center justify-center h-screen bg-gray-100">
               <div class="text-center">
-                <h1 class="text-2xl font-bold text-gray-800 mb-4">Generation in Progress</h1>
-                <p class="text-gray-600">Please wait while the application is being generated...</p>
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Generazione in Corso</h1>
+                <p class="text-gray-600">Attendere mentre l'applicazione viene generata...</p>
               </div>
             </div>
           </div>
@@ -330,7 +463,7 @@ const Editor = () => {
 
     fetchProjectData();
 
-    // Set up realtime subscription for project files
+    // Set up realtime subscription for project files and status
     const filesSubscription = supabase
       .channel('project_files')
       .on('postgres_changes', {
@@ -340,6 +473,17 @@ const Editor = () => {
         filter: `project_id=eq.${projectId}`
       }, () => {
         fetchProjectFiles();
+        setPreviewKey(prev => prev + 1);
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'projects',
+        filter: `id=eq.${projectId}`
+      }, (payload) => {
+        // Update project data when generation status changes
+        const updatedProject = payload.new as Project;
+        setProject(updatedProject);
         setPreviewKey(prev => prev + 1);
       })
       .subscribe();
@@ -391,7 +535,7 @@ const Editor = () => {
           type: 'ai',
           content: explanation,
           timestamp: new Date(),
-          tokens_used: result.tokensUsed
+          tokens_used: result.tokensUsed || 0
         };
         setChatMessages(prev => [...prev, aiMessage]);
 

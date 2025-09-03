@@ -70,7 +70,8 @@ const HeroSection = () => {
           description: prompt,
           owner_id: user.id,
           state: { isNew: true },
-          libraries: ['react', 'typescript', 'tailwindcss']
+          libraries: ['react', 'typescript', 'tailwindcss'],
+          generation_status: 'generating'
         })
         .select()
         .single();
@@ -87,40 +88,53 @@ const HeroSection = () => {
 
       console.log("Project created:", project.id);
 
-      // Call the AI generation function
-      const { data: result, error: genError } = await supabase.functions.invoke('ai-generate', {
+      // Immediately redirect to editor to show magic loading
+      navigate(`/editor/${project.id}`);
+
+      // Call the AI generation function in background
+      supabase.functions.invoke('ai-generate', {
         body: {
           projectId: project.id,
           prompt: prompt,
           isInitial: true
         }
+      }).then(({ data: result, error: genError }) => {
+        if (genError) {
+          console.error('Generation error:', genError);
+          // Update project status to failed
+          supabase
+            .from('projects')
+            .update({ 
+              generation_status: 'failed',
+              error_message: genError.message || "Errore durante la generazione"
+            })
+            .eq('id', project.id);
+        } else if (result.success) {
+          console.log('Generation completed successfully');
+          // The realtime subscription in Editor will handle the update
+        } else {
+          console.error('Generation failed:', result.error);
+          // Update project status to failed
+          supabase
+            .from('projects')
+            .update({ 
+              generation_status: 'failed',
+              error_message: result.error || "Generazione fallita"
+            })
+            .eq('id', project.id);
+        }
+      }).catch(error => {
+        console.error('Unexpected generation error:', error);
+        // Update project status to failed
+        supabase
+          .from('projects')
+          .update({ 
+            generation_status: 'failed',
+            error_message: "Si è verificato un errore imprevisto"
+          })
+          .eq('id', project.id);
       });
 
-      if (genError) {
-        console.error('Generation error:', genError);
-        toast({
-          variant: "destructive",
-          title: "Errore di generazione",
-          description: genError.message || "Errore durante la generazione",
-        });
-        return;
-      }
-
-      if (result.success) {
-        toast({
-          title: "App generata con successo!",
-          description: "La tua applicazione è stata creata",
-        });
-        
-        // Redirect to editor
-        navigate(`/editor/${project.id}`);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Errore",
-          description: result.error || "Generazione fallita",
-        });
-      }
     } catch (error) {
       console.error('Unexpected error:', error);
       toast({
