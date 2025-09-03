@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      generation_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          execution_time_ms: number | null
+          id: string
+          project_id: string
+          status: string
+          step: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          execution_time_ms?: number | null
+          id?: string
+          project_id: string
+          status: string
+          step: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          execution_time_ms?: number | null
+          id?: string
+          project_id?: string
+          status?: string
+          step?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -44,39 +82,133 @@ export type Database = {
         }
         Relationships: []
       }
+      project_files: {
+        Row: {
+          created_at: string
+          file_content: string
+          file_path: string
+          file_type: string
+          id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_content: string
+          file_path: string
+          file_type: string
+          id?: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_content?: string
+          file_path?: string
+          file_type?: string
+          id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_modifications: {
+        Row: {
+          created_at: string
+          files_changed: Json | null
+          id: string
+          modification_prompt: string
+          project_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          files_changed?: Json | null
+          id?: string
+          modification_prompt: string
+          project_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          files_changed?: Json | null
+          id?: string
+          modification_prompt?: string
+          project_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_modifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string | null
+          deploy_url: string | null
           description: string | null
+          error_message: string | null
+          generated_files: Json | null
+          generation_status: string
           id: string
           libraries: string[] | null
           messages_used: number | null
           name: string
+          original_prompt: string | null
           owner_id: string
+          package_json: Json | null
           state: Json | null
           status: Database["public"]["Enums"]["project_status"] | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          deploy_url?: string | null
           description?: string | null
+          error_message?: string | null
+          generated_files?: Json | null
+          generation_status?: string
           id?: string
           libraries?: string[] | null
           messages_used?: number | null
           name: string
+          original_prompt?: string | null
           owner_id: string
+          package_json?: Json | null
           state?: Json | null
           status?: Database["public"]["Enums"]["project_status"] | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          deploy_url?: string | null
           description?: string | null
+          error_message?: string | null
+          generated_files?: Json | null
+          generation_status?: string
           id?: string
           libraries?: string[] | null
           messages_used?: number | null
           name?: string
+          original_prompt?: string | null
           owner_id?: string
+          package_json?: Json | null
           state?: Json | null
           status?: Database["public"]["Enums"]["project_status"] | null
           updated_at?: string | null

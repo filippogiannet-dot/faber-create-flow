@@ -140,6 +140,43 @@ function validateRequest(body: any): { projectId: string; prompt: string; isInit
   return { projectId, prompt: prompt.trim(), isInitial };
 }
 
+// Log step function for tracking
+async function logStep(supabaseClient: any, projectId: string, step: string, status: string, details?: any) {
+  try {
+    await supabaseClient.from('generation_logs').insert({
+      project_id: projectId,
+      step,
+      status,
+      details: details ? JSON.stringify(details) : null,
+      execution_time_ms: Date.now()
+    });
+  } catch (error) {
+    console.error('Failed to log step:', error);
+  }
+}
+
+// Extract project name from prompt
+function extractProjectName(prompt: string): string {
+  const words = prompt.split(' ').slice(0, 3);
+  return words.join('-').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'generated-app';
+}
+
+// Get file type from path
+function getFileType(filePath: string): string {
+  const extension = filePath.split('.').pop()?.toLowerCase();
+  const typeMap: Record<string, string> = {
+    'js': 'javascript',
+    'jsx': 'javascript', 
+    'ts': 'typescript',
+    'tsx': 'typescript',
+    'css': 'css',
+    'html': 'html',
+    'json': 'json',
+    'md': 'markdown'
+  };
+  return typeMap[extension || ''] || 'text';
+}
+
 // Main handler
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -151,7 +188,7 @@ serve(async (req) => {
     userAgent: req.headers.get('user-agent') 
   });
 
-// Handle CORS preflight requests
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     log('DEBUG', 'CORS preflight request', { requestId });
     return new Response(null, { 
@@ -293,12 +330,21 @@ serve(async (req) => {
       isInitial 
     });
 
+    // Set project to generating status
+    await supabaseClient
+      .from('projects')
+      .update({ generation_status: 'generating' })
+      .eq('id', projectId);
+
+    await logStep(supabaseClient, projectId, 'parsing', 'started');
+
     // Check user's usage limits
     const { data: canProceed, error: limitError } = await supabaseClient
       .rpc('check_user_limits', { user_id: user.id });
 
     if (limitError) {
       log('ERROR', 'Failed to check usage limits', { requestId, error: limitError });
+      await logStep(supabaseClient, projectId, 'error', 'failed', { error: 'Failed to check usage limits' });
       return new Response(JSON.stringify({ 
         error: 'Failed to check usage limits',
         success: false,
@@ -311,6 +357,7 @@ serve(async (req) => {
 
     if (!canProceed) {
       log('INFO', 'User limit reached', { requestId, userId: user.id });
+      await logStep(supabaseClient, projectId, 'error', 'failed', { error: 'User limit reached' });
       return new Response(JSON.stringify({ 
         error: 'Message limit reached for your plan',
         success: false,
@@ -348,6 +395,7 @@ serve(async (req) => {
 
     if (!project || projectError) {
       log('ERROR', 'Project not found or access denied', { requestId, projectId, userId: user.id, error: projectError });
+      await logStep(supabaseClient, projectId, 'error', 'failed', { error: 'Project not found' });
       return new Response(JSON.stringify({ 
         error: 'Project not found or access denied',
         success: false,
@@ -359,59 +407,162 @@ serve(async (req) => {
     }
 
     log('INFO', 'Project found', { requestId, projectId, projectName: project.name });
+    await logStep(supabaseClient, projectId, 'parsing', 'completed');
 
-    // Build system prompt
-    const systemPrompt = `You are an expert coding assistant that generates modern web applications using React, TypeScript, and Tailwind CSS.
-
-Project Context:
-- Libraries: ${project.libraries?.join(', ') || 'react, typescript, tailwindcss'}
-- Current State: ${JSON.stringify(project.state || {}, null, 2)}
-
-Your task is to generate or modify code based on the user's request. Always:
-1. Use modern React with TypeScript
-2. Use Tailwind CSS for styling
-3. Follow best practices and clean code principles
-4. Generate functional, responsive components
-5. Include proper error handling
-
-${isInitial ? 'This is the initial generation for a new project. Create a complete app structure.' : 'This is an update to an existing project. Make incremental changes based on the current state.'}
-
-Return your response as a JSON object with this structure:
+    // Analyze the prompt first
+    await logStep(supabaseClient, projectId, 'analysis', 'started');
+    
+    const analysisPrompt = `
+Analyze this request and return ONLY valid JSON:
 {
-  "components": [
+  "projectType": "react|nextjs|vanilla|vue",
+  "components": ["ComponentName1", "ComponentName2"],
+  "dependencies": ["react", "tailwindcss"],
+  "styling": "tailwindcss|css|styled-components",
+  "complexity": "simple|medium|complex",
+  "fileStructure": {
+    "src/components/": ["Component.tsx"],
+    "src/": ["App.tsx", "index.tsx"],
+    "public/": ["index.html"]
+  }
+}
+
+Request: "${prompt}"
+`;
+
+    const analysisData = await callOpenAI(analysisPrompt, 'You are a project analyzer. Respond with only valid JSON.');
+    let analysis;
+    try {
+      analysis = JSON.parse(analysisData.choices[0].message.content);
+      await logStep(supabaseClient, projectId, 'analysis', 'completed', analysis);
+    } catch (e) {
+      analysis = {
+        projectType: 'react',
+        components: ['App'],
+        dependencies: ['react', 'tailwindcss'],
+        styling: 'tailwindcss',
+        complexity: 'simple',
+        fileStructure: { 'src/': ['App.tsx'], 'public/': ['index.html'] }
+      };
+      await logStep(supabaseClient, projectId, 'analysis', 'completed', { fallback: true });
+    }
+
+    // Generate code with the new structured approach
+    await logStep(supabaseClient, projectId, 'generation', 'started');
+
+    const codePrompt = `
+Generate a complete web application for: ${prompt}
+
+Technical specifications:
+${JSON.stringify(analysis)}
+
+RESPOND WITH VALID JSON ONLY:
+{
+  "files": [
     {
-      "name": "ComponentName",
-      "code": "component code here",
-      "type": "component|page|util"
+      "path": "package.json",
+      "content": "complete package.json content"
+    },
+    {
+      "path": "public/index.html",
+      "content": "complete HTML with React setup"
+    },
+    {
+      "path": "src/App.tsx",
+      "content": "complete React component code"
     }
   ],
-  "explanation": "Brief explanation of changes made",
-  "libraries": ["list", "of", "required", "libraries"]
-}`;
+  "explanation": "Brief explanation of what was built"
+}
 
-    // Call OpenAI API with retries
-    const aiData = await callOpenAI(prompt, systemPrompt);
-    const aiResponse = aiData.choices[0].message.content;
-    const tokensUsed = aiData.usage?.total_tokens || 0;
+CRITICAL RULES:
+- Generate 100% functional code
+- Use Tailwind CSS for all styling
+- Create clean, modular React components
+- Include proper TypeScript types
+- Responsive design
+- NO placeholders or TODOs
+- All code must be complete and ready to run
+`;
 
-    // Parse AI response
-    let parsedResponse;
+    const codeData = await callOpenAI(codePrompt, 'You are an expert React developer. Generate complete, functional code. Respond with valid JSON only.');
+    let generatedCode;
     try {
-      parsedResponse = JSON.parse(aiResponse);
-      log('INFO', 'AI response parsed successfully', { requestId, tokensUsed });
+      generatedCode = JSON.parse(codeData.choices[0].message.content);
+      await logStep(supabaseClient, projectId, 'generation', 'completed');
     } catch (parseError) {
-      log('ERROR', 'Failed to parse AI response', { requestId, error: parseError.message, aiResponse });
-      // Fallback response
-      parsedResponse = {
-        components: [{
-          name: 'GeneratedComponent',
-          code: `// Generated from prompt: ${prompt}\n${aiResponse}`,
-          type: 'component'
-        }],
-        explanation: 'AI response could not be parsed as JSON, returning as component code',
-        libraries: project.libraries || ['react', 'typescript', 'tailwindcss']
-      };
+      // Fallback: try to extract JSON from response
+      const content = codeData.choices[0].message.content;
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          generatedCode = JSON.parse(jsonMatch[0]);
+          await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true });
+        } catch (e2) {
+          throw new Error('AI response not in correct JSON format');
+        }
+      } else {
+        throw new Error('No JSON found in AI response');
+      }
     }
+
+    // Save generated files to the database
+    await logStep(supabaseClient, projectId, 'saving', 'started');
+
+    if (generatedCode.files && Array.isArray(generatedCode.files)) {
+      const fileInserts = generatedCode.files.map((file: any) => ({
+        project_id: projectId,
+        file_path: file.path,
+        file_content: file.content,
+        file_type: getFileType(file.path)
+      }));
+
+      const { error: filesError } = await supabaseClient
+        .from('project_files')
+        .upsert(fileInserts);
+
+      if (filesError) {
+        log('ERROR', 'Failed to save files', { requestId, error: filesError });
+        throw new Error(`Failed to save files: ${filesError.message}`);
+      }
+    }
+
+    // Extract and save package.json
+    const packageJsonFile = generatedCode.files?.find((f: any) => f.path === 'package.json');
+    let packageJson = {};
+    if (packageJsonFile) {
+      try {
+        packageJson = JSON.parse(packageJsonFile.content);
+      } catch (e) {
+        packageJson = { name: extractProjectName(prompt), version: '1.0.0' };
+      }
+    }
+
+    // Update project with structured data
+    const updateData = {
+      generation_status: 'completed',
+      original_prompt: prompt,
+      generated_files: { files: generatedCode.files },
+      package_json: packageJson,
+      state: {
+        ...project.state,
+        files: generatedCode.files,
+        lastModified: new Date().toISOString()
+      },
+      updated_at: new Date().toISOString()
+    };
+
+    const { error: updateError } = await supabaseClient
+      .from('projects')
+      .update(updateData)
+      .eq('id', projectId);
+
+    if (updateError) {
+      log('ERROR', 'Failed to update project', { requestId, error: updateError });
+      throw new Error(`Failed to update project: ${updateError.message}`);
+    }
+
+    await logStep(supabaseClient, projectId, 'saving', 'completed');
 
     // Save prompt and response to database
     const { data: promptRecord, error: promptError } = await supabaseClient
@@ -420,36 +571,17 @@ Return your response as a JSON object with this structure:
         project_id: projectId,
         user_id: user.id,
         prompt_text: prompt,
-        ai_response: parsedResponse,
-        tokens_used: tokensUsed
+        ai_response: {
+          explanation: generatedCode.explanation || 'Code generated successfully',
+          files: generatedCode.files
+        },
+        tokens_used: codeData.usage?.total_tokens || 0
       })
       .select()
       .single();
 
     if (promptError) {
       log('ERROR', 'Failed to save prompt', { requestId, error: promptError });
-      // Don't fail the request, just log the error
-    }
-
-    // Update project state
-    const newState = {
-      ...project.state,
-      components: parsedResponse.components || [],
-      libraries: parsedResponse.libraries || project.libraries || ['react', 'typescript', 'tailwindcss'],
-      lastModified: new Date().toISOString()
-    };
-
-    const { error: updateError } = await supabaseClient
-      .from('projects')
-      .update({ 
-        state: newState,
-        libraries: parsedResponse.libraries || project.libraries || ['react', 'typescript', 'tailwindcss']
-      })
-      .eq('id', projectId);
-
-    if (updateError) {
-      log('ERROR', 'Failed to update project', { requestId, error: updateError });
-      // Don't fail the request, just log the error
     }
 
     // Create snapshot
@@ -467,13 +599,12 @@ Return your response as a JSON object with this structure:
       .insert({
         project_id: projectId,
         version: nextVersion,
-        state: newState,
+        state: updateData.state,
         prompt_id: promptRecord?.id
       });
 
     if (snapshotError) {
       log('ERROR', 'Failed to create snapshot', { requestId, error: snapshotError });
-      // Don't fail the request, just log the error
     }
 
     // Increment usage counters
@@ -485,19 +616,21 @@ Return your response as a JSON object with this structure:
 
     if (usageError) {
       log('ERROR', 'Failed to increment usage', { requestId, error: usageError });
-      // Don't fail the request, just log the error
     }
 
     const response = {
       success: true,
-      response: parsedResponse,
+      response: {
+        explanation: generatedCode.explanation || 'Application generated successfully',
+        files: generatedCode.files
+      },
       version: nextVersion,
-      tokensUsed,
+      tokensUsed: codeData.usage?.total_tokens || 0,
       requestId
     };
 
     log('INFO', 'Request completed successfully', { 
-      requestId, 
+      requestId,
       userId: user.id, 
       projectId, 
       tokensUsed, 

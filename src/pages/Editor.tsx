@@ -52,12 +52,14 @@ interface Project {
   updated_at: string;
 }
 
-interface Snapshot {
+interface ProjectFile {
   id: string;
   project_id: string;
-  version: number;
-  state: any;
+  file_path: string;
+  file_content: string;
+  file_type: string;
   created_at: string;
+  updated_at: string;
 }
 
 type ViewMode = 'preview' | 'code';
@@ -70,9 +72,8 @@ const Editor = () => {
   const { toast } = useToast();
   
   const [project, setProject] = useState<Project | null>(null);
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
-  const [currentSnapshot, setCurrentSnapshot] = useState<Snapshot | null>(null);
   const [newPrompt, setNewPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
@@ -90,6 +91,164 @@ const Editor = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Fetch project files
+  const fetchProjectFiles = useCallback(async () => {
+    if (!projectId) return;
+
+    try {
+      const { data: files, error } = await supabase
+        .from('project_files')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('file_path');
+
+      if (error) {
+        console.error('Error fetching project files:', error);
+        return;
+      }
+
+      setProjectFiles(files || []);
+    } catch (error) {
+      console.error('Error fetching project files:', error);
+    }
+  }, [projectId]);
+
+  // Generate preview HTML from project files
+  const generatePreviewHtml = useCallback((files: ProjectFile[]): string => {
+    if (!files || files.length === 0) {
+      return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Preview</title>
+          <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+          <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+          <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+          <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body>
+          <div id="root">
+            <div class="flex items-center justify-center h-screen bg-gray-100">
+              <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">No Preview Available</h1>
+                <p class="text-gray-600">Generate some code to see the preview</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+    }
+
+    // Get the HTML file for the base structure
+    const htmlFile = files.find(f => f.file_path === 'public/index.html');
+    const appFile = files.find(f => 
+      f.file_path.includes('App.') && 
+      (f.file_path.endsWith('.tsx') || f.file_path.endsWith('.jsx'))
+    );
+    
+    if (htmlFile && appFile) {
+      // Use the generated HTML and inject the app component
+      let html = htmlFile.file_content;
+      
+      // If HTML doesn't have React setup, add it
+      if (!html.includes('react')) {
+        const headCloseIndex = html.indexOf('</head>');
+        if (headCloseIndex !== -1) {
+          const reactScripts = `
+            <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+            <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+            <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+            <script src="https://cdn.tailwindcss.com"></script>
+          `;
+          html = html.slice(0, headCloseIndex) + reactScripts + html.slice(headCloseIndex);
+        }
+      }
+
+      // Add the app component script
+      const bodyCloseIndex = html.lastIndexOf('</body>');
+      if (bodyCloseIndex !== -1) {
+        const appScript = `
+          <script type="text/babel">
+            const { useState, useEffect, useCallback } = React;
+            
+            ${appFile.file_content}
+            
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+          </script>
+        `;
+        html = html.slice(0, bodyCloseIndex) + appScript + html.slice(bodyCloseIndex);
+      }
+      
+      return html;
+    }
+
+    // Fallback: create HTML from app component only
+    const componentFile = appFile || files.find(f => 
+      f.file_type === 'typescript' || f.file_type === 'javascript'
+    );
+
+    if (!componentFile) {
+      return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Preview</title>
+          <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+          <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+          <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+          <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body>
+          <div id="root">
+            <div class="flex items-center justify-center h-screen bg-gray-100">
+              <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Generation in Progress</h1>
+                <p class="text-gray-600">Please wait while the application is being generated...</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Preview</title>
+        <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: system-ui, -apple-system, sans-serif; }
+        </style>
+      </head>
+      <body>
+        <div id="root"></div>
+        <script type="text/babel">
+          const { useState, useEffect, useCallback } = React;
+          
+          ${componentFile.file_content}
+          
+          const root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(<App />);
+        </script>
+      </body>
+      </html>
+    `;
+  }, []);
 
   // Fetch project data and setup realtime subscriptions
   useEffect(() => {
@@ -112,28 +271,12 @@ const Editor = () => {
             title: "Errore",
             description: "Progetto non trovato",
           });
-          navigate('/dashboard');
+          navigate('/');
           return;
         }
 
         setProject(projectData);
         setProjectName(projectData.name);
-
-        // Fetch snapshots
-        const { data: snapshotsData, error: snapshotsError } = await supabase
-          .from('snapshots')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('version', { ascending: false });
-
-        if (snapshotsError) {
-          console.error('Snapshots fetch error:', snapshotsError);
-        } else {
-          setSnapshots(snapshotsData || []);
-          if (snapshotsData && snapshotsData.length > 0) {
-            setCurrentSnapshot(snapshotsData[0]);
-          }
-        }
 
         // Fetch prompts for chat history
         const { data: promptsData, error: promptsError } = await supabase
@@ -172,6 +315,9 @@ const Editor = () => {
           setChatMessages(messages);
         }
 
+        // Fetch project files
+        await fetchProjectFiles();
+
       } catch (error) {
         console.error('Error fetching project data:', error);
         toast({
@@ -184,26 +330,24 @@ const Editor = () => {
 
     fetchProjectData();
 
-    // Set up realtime subscription for snapshots
-    const snapshotSubscription = supabase
-      .channel('snapshots')
+    // Set up realtime subscription for project files
+    const filesSubscription = supabase
+      .channel('project_files')
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
-        table: 'snapshots',
+        table: 'project_files',
         filter: `project_id=eq.${projectId}`
-      }, (payload) => {
-        const newSnapshot = payload.new as Snapshot;
-        setSnapshots(prev => [newSnapshot, ...prev]);
-        setCurrentSnapshot(newSnapshot);
+      }, () => {
+        fetchProjectFiles();
         setPreviewKey(prev => prev + 1);
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(snapshotSubscription);
+      supabase.removeChannel(filesSubscription);
     };
-  }, [projectId, user, navigate, toast]);
+  }, [projectId, user, navigate, toast, fetchProjectFiles]);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -255,6 +399,9 @@ const Editor = () => {
           title: "Codice aggiornato",
           description: "L'applicazione è stata modificata con successo",
         });
+
+        // Refresh files after generation
+        await fetchProjectFiles();
       } else {
         throw new Error(result.error || 'Generazione fallita');
       }
@@ -311,8 +458,8 @@ const Editor = () => {
   };
 
   const openInNewTab = () => {
-    if (currentSnapshot?.state) {
-      const htmlContent = extractHtml(currentSnapshot.state);
+    if (projectFiles.length > 0) {
+      const htmlContent = generatePreviewHtml(projectFiles);
       if (htmlContent) {
         const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -330,59 +477,16 @@ const Editor = () => {
     }
   };
 
-  const buildPreviewHtml = (state: any): string | null => {
-    const components = state?.components;
-    if (!Array.isArray(components) || components.length === 0) return null;
-
-    const main: any =
-      components.find((c: any) => c.name === 'App') ||
-      components.find((c: any) => c.type === 'page') ||
-      components[0];
-
-    const componentCodes = components
-      .map((c: any) => `// ${c.name}\n${c.code}`)
-      .join('\n\n');
-
-    return `<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Preview</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body class="min-h-screen bg-white">
-<div id="root"></div>
-<script type="text/babel" data-presets="typescript,react">
-${componentCodes}
-
-const Root = () => {
-  try {
-    return React.createElement(${main.name});
-  } catch (e) {
-    return React.createElement('pre', null, 'Render error: ' + e.message);
-  }
-};
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(Root));
-</script>
-</body>
-</html>`;
-  };
-
-  const extractHtml = (state: any): string | null => {
-    if (!state) return null;
-    if (typeof state === 'string') return state;
-    if (typeof state.html === 'string') return state.html;
-    if (typeof state.generatedCode === 'string') return state.generatedCode;
-    if (typeof state.code === 'string') return state.code;
-    const built = buildPreviewHtml(state);
-    if (built) return built;
-    return null;
+  const getCurrentCode = () => {
+    if (projectFiles.length === 0) return '';
+    
+    // Get main app file or first file
+    const appFile = projectFiles.find(f => 
+      f.file_path.includes('App.') && 
+      (f.file_path.endsWith('.tsx') || f.file_path.endsWith('.jsx'))
+    ) || projectFiles[0];
+    
+    return appFile?.file_content || '';
   };
 
   if (loading) {
@@ -401,8 +505,8 @@ root.render(React.createElement(Root));
     );
   }
 
-  const currentCode = extractHtml(currentSnapshot?.state) ?? '';
-  const displayCode = currentCode || (currentSnapshot?.state ? JSON.stringify(currentSnapshot.state, null, 2) : '');
+  const currentHtml = generatePreviewHtml(projectFiles);
+  const displayCode = getCurrentCode();
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -413,7 +517,7 @@ root.render(React.createElement(Root));
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/')}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -449,9 +553,9 @@ root.render(React.createElement(Root));
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+              <DropdownMenuItem onClick={() => navigate('/')}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Torna alla dashboard
+                Torna alla home
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsEditingName(true)}>
                 <Edit3 className="w-4 h-4 mr-2" />
@@ -523,87 +627,99 @@ root.render(React.createElement(Root));
             </div>
           )}
           
-          <Button variant="ghost" size="sm" onClick={refreshPreview}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={refreshPreview}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <RotateCcw className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={openInNewTab}>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={openInNewTab}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <ExternalLink className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Github className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Database className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main content */}
       <div className="flex-1 flex">
-        {/* Left Sidebar - Chat */}
-        <div className="w-80 border-r border-border bg-card flex flex-col">
-          {/* Chat Messages */}
+        {/* Left panel - Chat */}
+        <div className="w-96 border-r border-border bg-card flex flex-col">
+          {/* Chat messages */}
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
               {chatMessages.map((message) => (
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-3",
-                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                    "flex gap-3 max-w-[280px]",
+                    message.type === 'user' ? "ml-auto" : "",
+                    message.type === 'system' ? "justify-center" : ""
                   )}
                 >
-                  {message.type !== 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      {message.type === 'ai' ? (
-                        <Bot className="w-4 h-4 text-primary" />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">!</span>
-                      )}
+                  {message.type !== 'user' && message.type !== 'system' && (
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-4 h-4 text-primary-foreground" />
                     </div>
                   )}
                   
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-lg p-3 text-sm",
+                      "rounded-lg px-3 py-2 text-sm break-words",
                       message.type === 'user'
-                        ? "bg-card text-foreground border border-border"
-                        : message.type === 'ai'
-                        ? "bg-muted text-foreground border border-border"
-                        : "bg-destructive/10 text-destructive border border-destructive/20"
+                        ? "bg-primary text-primary-foreground ml-auto"
+                        : message.type === 'system'
+                        ? "bg-destructive text-destructive-foreground text-center"
+                        : "bg-muted text-muted-foreground"
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {message.timestamp.toLocaleTimeString('it-IT', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                      {message.tokens_used && (
-                        <span className="ml-2">• {message.tokens_used} token</span>
-                      )}
-                    </p>
-                  </div>
-                  
-                    {message.type === 'user' && (
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-foreground" />
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                    {message.tokens_used && (
+                      <div className="text-xs opacity-70 mt-1">
+                        {message.tokens_used} tokens
                       </div>
                     )}
+                  </div>
+                  
+                  {message.type === 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
               ))}
+              
+              {isGenerating && (
+                <div className="flex gap-3 max-w-[280px]">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="animate-pulse">Generazione in corso...</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
-          {/* Input Area */}
+          {/* Chat input */}
           <div className="p-4 border-t border-border">
             <div className="flex gap-2">
               <Textarea
                 value={newPrompt}
                 onChange={(e) => setNewPrompt(e.target.value)}
                 placeholder="Descrivi le modifiche che vuoi apportare..."
-                className="min-h-[60px] max-h-32 resize-none bg-background"
+                className="flex-1 min-h-[80px] resize-none"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -616,7 +732,7 @@ root.render(React.createElement(Root));
                 onClick={handleSendPrompt}
                 disabled={!newPrompt.trim() || isGenerating}
                 size="sm"
-                className="h-auto self-end bg-gradient-button"
+                className="self-end"
               >
                 <Send className="w-4 h-4" />
               </Button>
@@ -624,44 +740,34 @@ root.render(React.createElement(Root));
           </div>
         </div>
 
-        {/* Right Main Area - Preview/Code */}
-        <div className="flex-1 bg-background">
+        {/* Right panel - Preview/Code */}
+        <div className="flex-1 flex flex-col bg-muted/20">
           {viewMode === 'preview' ? (
-            <div className="h-full flex flex-col">
-              <div className="flex-1 p-4">
-                <div 
-                  className="h-full border border-border rounded-lg overflow-hidden bg-card"
-                  style={{ width: getDeviceWidth(), margin: '0 auto' }}
-                >
-                  {currentCode ? (
-                    <iframe
-                      key={previewKey}
-                      ref={iframeRef}
-                      srcDoc={currentCode}
-                      className="w-full h-full border-0"
-                      title="Preview"
-                      sandbox="allow-scripts allow-same-origin"
-                    />
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                      <div className="text-center">
-                        <Monitor className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Nessun contenuto da visualizzare</p>
-                        <p className="text-sm mt-2">Invia un prompt per generare l'applicazione</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            <div className="flex-1 flex items-center justify-center p-4">
+              <div 
+                className="bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300"
+                style={{ 
+                  width: getDeviceWidth(),
+                  height: deviceSize === 'mobile' ? '667px' : deviceSize === 'tablet' ? '1024px' : '100%',
+                  maxHeight: '100%'
+                }}
+              >
+                <iframe
+                  key={previewKey}
+                  ref={iframeRef}
+                  srcDoc={currentHtml}
+                  className="w-full h-full border-0"
+                  title="Preview"
+                  sandbox="allow-scripts allow-same-origin"
+                />
               </div>
             </div>
           ) : (
-            <div className="h-full p-4">
-              <ScrollArea className="h-full">
-                <pre className="text-sm bg-muted p-4 rounded-lg overflow-x-auto">
-                  <code>{displayCode || '// Nessun codice generato ancora'}</code>
-                </pre>
-              </ScrollArea>
-            </div>
+            <ScrollArea className="flex-1">
+              <pre className="p-4 text-sm font-mono bg-muted/50 min-h-full">
+                <code>{displayCode || 'Nessun codice generato ancora...'}</code>
+              </pre>
+            </ScrollArea>
           )}
         </div>
       </div>
