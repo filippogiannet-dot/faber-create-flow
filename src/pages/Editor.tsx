@@ -13,7 +13,7 @@ import {
   HelpCircle, 
   Monitor, 
   Code, 
-  RefreshCw, 
+  RotateCcw, 
   ExternalLink, 
   Smartphone, 
   Tablet, 
@@ -428,7 +428,7 @@ const Editor = () => {
           </DropdownMenu>
           
           <Button variant="ghost" size="sm" onClick={refreshPreview}>
-            <RefreshCw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4" />
           </Button>
           
           <Button variant="ghost" size="sm" onClick={openInNewTab}>
