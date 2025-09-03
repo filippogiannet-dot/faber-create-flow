@@ -128,7 +128,7 @@ Code Block Structure:
 ## Example AI → Backend → Frontend Flow
 
 **Prompt:**  
-“Create a portfolio management app.”
+"Create a portfolio management app."
 
 **AI Response → JSON:**  
 ```json
@@ -140,3 +140,4 @@ Code Block Structure:
   ],
   "explanation": "Basic portfolio app with list and add form."
 }
+```
