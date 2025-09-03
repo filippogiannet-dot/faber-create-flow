@@ -155,11 +155,11 @@ const Editor = () => {
               tokens_used: prompt.tokens_used
             });
 
-            if (prompt.ai_response?.response) {
+            if (prompt.ai_response) {
               messages.push({
                 id: `ai-${prompt.id}`,
                 type: 'ai',
-                content: prompt.ai_response.response,
+                content: prompt.ai_response.explanation || 'Aggiornamento del codice generato.',
                 timestamp: new Date(prompt.created_at)
               });
             }
@@ -235,8 +235,9 @@ const Editor = () => {
         const aiMessage: ChatMessage = {
           id: `ai-${Date.now()}`,
           type: 'ai',
-          content: result.response || 'Codice generato con successo!',
-          timestamp: new Date()
+          content: result.response?.explanation || 'Codice generato con successo!',
+          timestamp: new Date(),
+          tokens_used: result.tokensUsed
         };
         setChatMessages(prev => [...prev, aiMessage]);
 
@@ -319,12 +320,58 @@ const Editor = () => {
     }
   };
 
+  const buildPreviewHtml = (state: any): string | null => {
+    const components = state?.components;
+    if (!Array.isArray(components) || components.length === 0) return null;
+
+    const main: any =
+      components.find((c: any) => c.name === 'App') ||
+      components.find((c: any) => c.type === 'page') ||
+      components[0];
+
+    const componentCodes = components
+      .map((c: any) => `// ${c.name}\n${c.code}`)
+      .join('\n\n');
+
+    return `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Preview</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="min-h-screen bg-white">
+<div id="root"></div>
+<script type="text/babel" data-presets="typescript,react">
+${componentCodes}
+
+const Root = () => {
+  try {
+    return React.createElement(${main.name});
+  } catch (e) {
+    return React.createElement('pre', null, 'Render error: ' + e.message);
+  }
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(Root));
+</script>
+</body>
+</html>`;
+  };
+
   const extractHtml = (state: any): string | null => {
     if (!state) return null;
     if (typeof state === 'string') return state;
     if (typeof state.html === 'string') return state.html;
     if (typeof state.generatedCode === 'string') return state.generatedCode;
     if (typeof state.code === 'string') return state.code;
+    const built = buildPreviewHtml(state);
+    if (built) return built;
     return null;
   };
 
@@ -510,10 +557,10 @@ const Editor = () => {
                     className={cn(
                       "max-w-[80%] rounded-lg p-3 text-sm",
                       message.type === 'user'
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-card text-foreground border border-border"
                         : message.type === 'ai'
-                        ? "bg-muted text-foreground"
-                        : "bg-destructive/10 text-destructive"
+                        ? "bg-muted text-foreground border border-border"
+                        : "bg-destructive/10 text-destructive border border-destructive/20"
                     )}
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
@@ -528,11 +575,11 @@ const Editor = () => {
                     </p>
                   </div>
                   
-                  {message.type === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                  )}
+                    {message.type === 'user' && (
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-foreground" />
+                      </div>
+                    )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -573,7 +620,7 @@ const Editor = () => {
             <div className="h-full flex flex-col">
               <div className="flex-1 p-4">
                 <div 
-                  className="h-full border border-border rounded-lg overflow-hidden bg-white"
+                  className="h-full border border-border rounded-lg overflow-hidden bg-card"
                   style={{ width: getDeviceWidth(), margin: '0 auto' }}
                 >
                   {currentCode ? (

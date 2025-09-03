@@ -40,9 +40,8 @@ const HeroSection = () => {
         .from('projects')
         .select('id, name, description, messages_used, updated_at')
         .eq('owner_id', user?.id)
-        .eq('status', 'active')
         .order('updated_at', { ascending: false })
-        .limit(3);
+        .limit(50);
 
       if (error) throw error;
       setRecentProjects(data || []);
