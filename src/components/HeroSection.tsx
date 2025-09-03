@@ -1,18 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { Paperclip, Sparkles } from "lucide-react";
+import { Paperclip, Sparkles, FolderOpen, Calendar } from "lucide-react";
 import { useAuth } from "@/integrations/supabase/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
+import { it } from "date-fns/locale";
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  messages_used: number;
+  updated_at: string;
+}
 
 const HeroSection = () => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const navigate = useNavigate();
   const { user, session } = useAuth();
   const { toast } = useToast();
+
+  // Fetch recent projects when user is logged in
+  useEffect(() => {
+    if (user) {
+      fetchRecentProjects();
+    }
+  }, [user]);
+
+  const fetchRecentProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, description, messages_used, updated_at')
+        .eq('owner_id', user?.id)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      setRecentProjects(data || []);
+    } catch (error) {
+      console.error('Error fetching recent projects:', error);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -177,6 +214,53 @@ const HeroSection = () => {
             </Button>
           </div>
         </div>
+
+        {/* Recent Projects for Logged-in Users */}
+        {user && recentProjects.length > 0 && (
+          <div className="max-w-4xl mx-auto mb-16">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">I tuoi progetti recenti</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate('/dashboard')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <FolderOpen className="w-4 h-4 mr-2" />
+                Vedi tutti
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recentProjects.map((project) => (
+                <Card 
+                  key={project.id}
+                  className="bg-card/50 border-border hover:bg-card/80 transition-all duration-300 cursor-pointer"
+                  onClick={() => navigate(`/editor/${project.id}`)}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-foreground line-clamp-1">
+                      {project.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {formatDistanceToNow(new Date(project.updated_at), { 
+                          addSuffix: true,
+                          locale: it 
+                        })}
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {project.messages_used}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Italian AI Assistant Section */}
         <div className="text-center max-w-3xl mx-auto animate-fade-in mb-24">

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { 
   ArrowLeft, 
   Settings, 
@@ -21,7 +22,8 @@ import {
   Database,
   ChevronDown,
   User,
-  Bot
+  Bot,
+  Edit3
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface ChatMessage {
   id: string;
@@ -103,72 +106,20 @@ const Editor = () => {
           .single();
 
         if (projectError) {
-          console.error('Error fetching project:', projectError);
+          console.error('Project fetch error:', projectError);
           toast({
-            title: "Error",
-            description: "Failed to load project. Redirecting to dashboard.",
-            variant: "destructive"
+            variant: "destructive",
+            title: "Errore",
+            description: "Progetto non trovato",
           });
-          navigate('/');
+          navigate('/dashboard');
           return;
         }
 
         setProject(projectData);
         setProjectName(projectData.name);
 
-        // Fetch chat history from prompts table
-        const { data: promptsData, error: promptsError } = await supabase
-          .from('prompts')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('created_at', { ascending: true });
-
-        if (promptsError) {
-          console.error('Error fetching prompts:', promptsError);
-        } else {
-          // Convert prompts to chat messages (text only, no code)
-          const tempMessages: ChatMessage[] = [];
-          promptsData.forEach((prompt: any) => {
-            // User message
-            tempMessages.push({
-              id: `user-${prompt.id}`,
-              type: 'user',
-              content: prompt.prompt_text,
-              timestamp: new Date(prompt.created_at)
-            });
-            
-            // AI response (extract explanation only, not code)
-            if (prompt.ai_response) {
-              try {
-                const response = typeof prompt.ai_response === 'string' 
-                  ? JSON.parse(prompt.ai_response) 
-                  : prompt.ai_response;
-                
-                // Extract only explanation/content, not the generated code
-                const aiContent = response.explanation || response.content || "Code generated successfully!";
-                
-                tempMessages.push({
-                  id: `ai-${prompt.id}`,
-                  type: 'ai',
-                  content: aiContent,
-                  timestamp: new Date(prompt.created_at),
-                  tokens_used: prompt.tokens_used
-                });
-              } catch {
-                tempMessages.push({
-                  id: `ai-${prompt.id}`,
-                  type: 'ai',
-                  content: "Code generated successfully!",
-                  timestamp: new Date(prompt.created_at),
-                  tokens_used: prompt.tokens_used
-                });
-              }
-            }
-          });
-          setChatMessages(tempMessages);
-        }
-
-        // Fetch snapshots and get the latest one for preview
+        // Fetch snapshots
         const { data: snapshotsData, error: snapshotsError } = await supabase
           .from('snapshots')
           .select('*')
@@ -176,164 +127,186 @@ const Editor = () => {
           .order('version', { ascending: false });
 
         if (snapshotsError) {
-          console.error('Error fetching snapshots:', snapshotsError);
+          console.error('Snapshots fetch error:', snapshotsError);
         } else {
-          setSnapshots(snapshotsData);
-          if (snapshotsData.length > 0) {
-            setCurrentSnapshot(snapshotsData[0]); // Latest snapshot
+          setSnapshots(snapshotsData || []);
+          if (snapshotsData && snapshotsData.length > 0) {
+            setCurrentSnapshot(snapshotsData[0]);
           }
         }
 
+        // Fetch prompts for chat history
+        const { data: promptsData, error: promptsError } = await supabase
+          .from('prompts')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: true });
+
+        if (promptsError) {
+          console.error('Prompts fetch error:', promptsError);
+        } else {
+          const messages: ChatMessage[] = [];
+          promptsData?.forEach((prompt) => {
+            messages.push({
+              id: `user-${prompt.id}`,
+              type: 'user',
+              content: prompt.prompt_text,
+              timestamp: new Date(prompt.created_at),
+              tokens_used: prompt.tokens_used
+            });
+
+            if (prompt.ai_response?.response) {
+              messages.push({
+                id: `ai-${prompt.id}`,
+                type: 'ai',
+                content: prompt.ai_response.response,
+                timestamp: new Date(prompt.created_at)
+              });
+            }
+          });
+          setChatMessages(messages);
+        }
+
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching project data:', error);
         toast({
-          title: "Error",
-          description: "Failed to load project",
-          variant: "destructive"
+          variant: "destructive",
+          title: "Errore",
+          description: "Errore nel caricamento del progetto",
         });
       }
     };
 
     fetchProjectData();
 
-    // Setup realtime subscription for snapshots
-    const snapshotsChannel = supabase
-      .channel('snapshots-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'snapshots',
-          filter: `project_id=eq.${projectId}`
-        },
-        (payload) => {
-          const newSnapshot = payload.new as Snapshot;
-          setSnapshots(prev => [newSnapshot, ...prev]);
-          setCurrentSnapshot(newSnapshot);
-          setPreviewKey(prev => prev + 1);
-        }
-      )
+    // Set up realtime subscription for snapshots
+    const snapshotSubscription = supabase
+      .channel('snapshots')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'snapshots',
+        filter: `project_id=eq.${projectId}`
+      }, (payload) => {
+        const newSnapshot = payload.new as Snapshot;
+        setSnapshots(prev => [newSnapshot, ...prev]);
+        setCurrentSnapshot(newSnapshot);
+        setPreviewKey(prev => prev + 1);
+      })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(snapshotsChannel);
+      supabase.removeChannel(snapshotSubscription);
     };
   }, [projectId, user, navigate, toast]);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
   const handleSendPrompt = async () => {
-    if (!newPrompt.trim() || !project || !session || isGenerating) return;
+    if (!newPrompt.trim() || isGenerating || !projectId) return;
 
-    setIsGenerating(true);
-    
-    // Add user message to chat immediately
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       type: 'user',
-      content: newPrompt.trim(),
+      content: newPrompt,
       timestamp: new Date()
     };
 
     setChatMessages(prev => [...prev, userMessage]);
-    const promptText = newPrompt.trim();
+    setIsGenerating(true);
+    const promptText = newPrompt;
     setNewPrompt("");
 
     try {
-      const response = await fetch(`https://rzbtrvceflkvrhphbksx.supabase.co/functions/v1/ai-generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          projectId: project.id,
+      const { data: result, error } = await supabase.functions.invoke('ai-generate', {
+        body: {
+          projectId,
           prompt: promptText,
-          isInitial: chatMessages.length === 0
-        }),
+          isInitial: false
+        }
       });
 
-      const data = await response.json();
+      if (error) throw error;
 
-      if (!data.success) {
-        throw new Error(data.error || 'Generation failed');
+      if (result.success) {
+        const aiMessage: ChatMessage = {
+          id: `ai-${Date.now()}`,
+          type: 'ai',
+          content: result.response || 'Codice generato con successo!',
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, aiMessage]);
+
+        toast({
+          title: "Codice aggiornato",
+          description: "L'applicazione è stata modificata con successo",
+        });
+      } else {
+        throw new Error(result.error || 'Generazione fallita');
       }
-
-      // Add AI explanation to chat (not the code)
-      const aiMessage: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: data.explanation || data.content || 'Code generated successfully!',
-        timestamp: new Date(),
-        tokens_used: data.tokensUsed
-      };
-
-      setChatMessages(prev => [...prev, aiMessage]);
-
-      // Add system message for applied changes
-      const systemMessage: ChatMessage = {
-        id: `system-${Date.now()}`,
-        type: 'system',
-        content: `Applied changes • Version ${data.version || 'unknown'}`,
-        timestamp: new Date()
-      };
-
-      setChatMessages(prev => [...prev, systemMessage]);
-
-      toast({
-        title: "Success",
-        description: `Generated with ${data.tokensUsed || 0} tokens`,
-      });
-
     } catch (error) {
-      console.error('Generation error:', error);
+      console.error('Error sending prompt:', error);
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
-        type: 'ai',
-        content: `Error: ${error instanceof Error ? error.message : 'Generation failed'}`,
+        type: 'system',
+        content: `Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`,
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, errorMessage]);
       
       toast({
-        title: "Error",
-        description: "Failed to generate. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Errore",
+        description: "Errore durante la generazione",
       });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleUpdateProjectName = async () => {
+  const handleProjectNameSave = async () => {
     if (!project || !projectName.trim()) return;
 
     try {
       const { error } = await supabase
         .from('projects')
-        .update({ name: projectName.trim() })
-        .eq('id', project.id);
+        .update({ name: projectName })
+        .eq('id', project.id)
+        .eq('owner_id', user?.id);
 
       if (error) throw error;
 
-      setProject(prev => prev ? { ...prev, name: projectName.trim() } : null);
+      setProject({ ...project, name: projectName });
       setIsEditingName(false);
-      
       toast({
-        title: "Success",
-        description: "Project name updated"
+        title: "Nome aggiornato",
+        description: "Il nome del progetto è stato modificato",
       });
     } catch (error) {
       console.error('Error updating project name:', error);
       toast({
-        title: "Error",
-        description: "Failed to update project name",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile aggiornare il nome del progetto",
       });
+    }
+  };
+
+  const refreshPreview = () => {
+    setPreviewKey(prev => prev + 1);
+  };
+
+  const openInNewTab = () => {
+    if (currentSnapshot?.state) {
+      const htmlContent = extractHtml(currentSnapshot.state);
+      if (htmlContent) {
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      }
     }
   };
 
@@ -346,54 +319,6 @@ const Editor = () => {
     }
   };
 
-  const refreshPreview = () => {
-    setPreviewKey(prev => prev + 1);
-  };
-
-  const openInNewTab = () => {
-    if (currentSnapshot?.state) {
-      try {
-        const htmlContent = currentSnapshot.state.html || currentSnapshot.state.generatedCode || currentSnapshot.state;
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      } catch (error) {
-        console.error('Error opening in new tab:', error);
-        toast({
-          title: "Error",
-          description: "Failed to open preview in new tab",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading editor...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!project) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Project not found</p>
-          <Button onClick={() => navigate('/')} variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Safely extract HTML/code string from snapshot.state
   const extractHtml = (state: any): string | null => {
     if (!state) return null;
     if (typeof state === 'string') return state;
@@ -403,281 +328,282 @@ const Editor = () => {
     return null;
   };
 
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Caricamento...</p>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Progetto non trovato</p>
+      </div>
+    );
+  }
+
   const currentCode = extractHtml(currentSnapshot?.state) ?? '';
   const displayCode = currentCode || (currentSnapshot?.state ? JSON.stringify(currentSnapshot.state, null, 2) : '');
 
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 flex-shrink-0 z-10">
-        {/* Left - Project Menu */}
-        <div className="flex items-center space-x-4">
+      <div className="h-14 border-b border-border bg-card flex items-center px-4 gap-4">
+        {/* Left section */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/dashboard')}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="text-left flex items-center space-x-2 max-w-xs">
+              <Button variant="ghost" className="text-foreground hover:text-primary">
                 {isEditingName ? (
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    onBlur={handleUpdateProjectName}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleUpdateProjectName();
-                      if (e.key === 'Escape') {
-                        setProjectName(project.name);
-                        setIsEditingName(false);
-                      }
-                    }}
-                    className="bg-transparent border-none outline-none text-sm font-medium"
-                    autoFocus
-                  />
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Input
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      onBlur={handleProjectNameSave}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleProjectNameSave();
+                        } else if (e.key === 'Escape') {
+                          setProjectName(project.name);
+                          setIsEditingName(false);
+                        }
+                      }}
+                      className="w-48 h-7"
+                      autoFocus
+                    />
+                  </div>
                 ) : (
                   <>
-                    <span className="truncate font-medium">{project.name}</span>
-                    <ChevronDown className="w-4 h-4" />
+                    <span className="max-w-48 truncate">{project.name}</span>
+                    <ChevronDown className="w-4 h-4 ml-1" />
                   </>
                 )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => navigate('/')}>
+              <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                Torna alla dashboard
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsEditingName(true)}>
-                Rename Project
+                <Edit3 className="w-4 h-4 mr-2" />
+                Rinomina progetto
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <Settings className="w-4 h-4 mr-2" />
-                Settings
+                Impostazioni
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <HelpCircle className="w-4 h-4 mr-2" />
-                Help
+                Aiuto
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Center - View Toggle */}
-        <div className="flex items-center space-x-2">
+        {/* Center section */}
+        <div className="flex items-center gap-1 bg-muted rounded-md p-1">
           <Button
-            variant={viewMode === 'preview' ? 'default' : 'ghost'}
+            variant={viewMode === 'preview' ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode('preview')}
+            className="text-xs"
           >
-            <Monitor className="w-4 h-4 mr-2" />
+            <Monitor className="w-4 h-4 mr-1" />
             Preview
           </Button>
           <Button
-            variant={viewMode === 'code' ? 'default' : 'ghost'}
+            variant={viewMode === 'code' ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode('code')}
+            className="text-xs"
           >
-            <Code className="w-4 h-4 mr-2" />
+            <Code className="w-4 h-4 mr-1" />
             Code
           </Button>
         </div>
 
-        {/* Right - Tools */}
-        <div className="flex items-center space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
+        {/* Right section */}
+        <div className="flex items-center gap-2 ml-auto">
+          {viewMode === 'preview' && (
+            <div className="flex items-center gap-1 bg-muted rounded-md p-1">
+              <Button
+                variant={deviceSize === 'mobile' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDeviceSize('mobile')}
+                className="text-xs"
+              >
                 <Smartphone className="w-4 h-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setDeviceSize('mobile')}>
-                <Smartphone className="w-4 h-4 mr-2" />
-                Mobile (375px)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDeviceSize('tablet')}>
-                <Tablet className="w-4 h-4 mr-2" />
-                Tablet (768px)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDeviceSize('desktop')}>
-                <Monitor className="w-4 h-4 mr-2" />
-                Desktop
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Button
+                variant={deviceSize === 'tablet' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDeviceSize('tablet')}
+                className="text-xs"
+              >
+                <Tablet className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={deviceSize === 'desktop' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDeviceSize('desktop')}
+                className="text-xs"
+              >
+                <Monitor className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
           
           <Button variant="ghost" size="sm" onClick={refreshPreview}>
             <RotateCcw className="w-4 h-4" />
           </Button>
-          
           <Button variant="ghost" size="sm" onClick={openInNewTab}>
             <ExternalLink className="w-4 h-4" />
           </Button>
-          
           <Button variant="ghost" size="sm">
             <Github className="w-4 h-4" />
           </Button>
-          
           <Button variant="ghost" size="sm">
             <Database className="w-4 h-4" />
           </Button>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Sidebar - Chat (fixed width, independent scroll) */}
-        <div className="w-96 border-r border-border flex flex-col bg-card/30 flex-shrink-0">
+      <div className="flex-1 flex">
+        {/* Left Sidebar - Chat */}
+        <div className="w-80 border-r border-border bg-card flex flex-col">
           {/* Chat Messages */}
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
-              {chatMessages.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  <p>Start a conversation to generate your app</p>
-                </div>
-              ) : (
-                chatMessages.map((message) => (
-                  <div key={message.id} className={`space-y-2 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
-                    {message.type === 'system' ? (
-                      <div className="text-center py-2">
-                        <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                          {message.content}
-                        </span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className={`inline-flex items-start space-x-2 max-w-[85%] ${
-                          message.type === 'user' ? 'flex-row-reverse space-x-reverse ml-auto' : ''
-                        }`}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            message.type === 'user' ? 'bg-primary' : 'bg-muted'
-                          }`}>
-                            {message.type === 'user' ? (
-                              <User className="w-3 h-3 text-primary-foreground" />
-                            ) : (
-                              <Bot className="w-3 h-3 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className={`p-3 rounded-lg ${
-                            message.type === 'user' 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'bg-muted text-muted-foreground'
-                          }`}>
-                            <div className="text-sm whitespace-pre-wrap">
-                              {message.content}
-                            </div>
-                            {message.tokens_used && (
-                              <div className="text-xs opacity-70 mt-2">
-                                {message.tokens_used} tokens
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className={`text-xs text-muted-foreground ${
-                          message.type === 'user' ? 'text-right' : 'text-left'
-                        }`}>
-                          {message.timestamp.toLocaleTimeString()}
-                        </div>
-                      </>
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex gap-3",
+                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  {message.type !== 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      {message.type === 'ai' ? (
+                        <Bot className="w-4 h-4 text-primary" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">!</span>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-lg p-3 text-sm",
+                      message.type === 'user'
+                        ? "bg-primary text-primary-foreground"
+                        : message.type === 'ai'
+                        ? "bg-muted text-foreground"
+                        : "bg-destructive/10 text-destructive"
                     )}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-xs opacity-70 mt-1">
+                      {message.timestamp.toLocaleTimeString('it-IT', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                      {message.tokens_used && (
+                        <span className="ml-2">• {message.tokens_used} token</span>
+                      )}
+                    </p>
                   </div>
-                ))
-              )}
-              {isGenerating && (
-                <div className="text-left">
-                  <div className="inline-flex items-start space-x-2 max-w-[85%]">
-                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-3 h-3 text-muted-foreground" />
+                  
+                  {message.type === 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    <div className="bg-muted p-3 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                        <span className="text-sm">Generating...</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              )}
+              ))}
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
-          {/* Chat Input */}
-          <div className="p-4 border-t border-border flex-shrink-0">
-            <div className="space-y-2">
+          {/* Input Area */}
+          <div className="p-4 border-t border-border">
+            <div className="flex gap-2">
               <Textarea
-                placeholder="Describe what you want to build..."
                 value={newPrompt}
                 onChange={(e) => setNewPrompt(e.target.value)}
+                placeholder="Descrivi le modifiche che vuoi apportare..."
+                className="min-h-[60px] max-h-32 resize-none bg-background"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSendPrompt();
                   }
                 }}
-                rows={3}
-                className="resize-none"
+                disabled={isGenerating}
               />
-              <div className="flex items-center justify-end">
-                <Button 
-                  onClick={handleSendPrompt} 
-                  disabled={!newPrompt.trim() || isGenerating}
-                  size="sm"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
+              <Button
+                onClick={handleSendPrompt}
+                disabled={!newPrompt.trim() || isGenerating}
+                size="sm"
+                className="h-auto self-end bg-gradient-button"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Main Area - Preview/Code (fills remaining space) */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Right Main Area - Preview/Code */}
+        <div className="flex-1 bg-background">
           {viewMode === 'preview' ? (
-            <div className="flex-1 p-6 bg-muted/20 flex items-center justify-center">
-              <div 
-                className="h-full mx-auto bg-background rounded-lg border border-border overflow-hidden shadow-lg"
-                style={{ width: getDeviceWidth(), maxHeight: 'calc(100vh - 120px)' }}
-              >
-                {currentCode ? (
-                  <iframe
-                    key={previewKey}
-                    ref={iframeRef}
-                    srcDoc={currentCode}
-                    className="w-full h-full"
-                    title="App Preview"
-                    sandbox="allow-scripts allow-forms allow-same-origin"
-                  />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <Monitor className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>No preview available</p>
-                      <p className="text-sm">Start generating to see your app</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 p-4">
-              <div className="h-full bg-card rounded-lg border border-border">
-                <div className="h-full p-4">
+            <div className="h-full flex flex-col">
+              <div className="flex-1 p-4">
+                <div 
+                  className="h-full border border-border rounded-lg overflow-hidden bg-white"
+                  style={{ width: getDeviceWidth(), margin: '0 auto' }}
+                >
                   {currentCode ? (
-                    <ScrollArea className="h-full">
-                      <pre className="text-sm bg-muted/50 p-4 rounded">
-                        <code>{currentCode}</code>
-                      </pre>
-                    </ScrollArea>
+                    <iframe
+                      key={previewKey}
+                      ref={iframeRef}
+                      srcDoc={currentCode}
+                      className="w-full h-full border-0"
+                      title="Preview"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
                   ) : (
                     <div className="h-full flex items-center justify-center text-muted-foreground">
                       <div className="text-center">
-                        <Code className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>No code generated yet</p>
-                        <p className="text-sm">Start a conversation to generate code</p>
+                        <Monitor className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>Nessun contenuto da visualizzare</p>
+                        <p className="text-sm mt-2">Invia un prompt per generare l'applicazione</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
+            </div>
+          ) : (
+            <div className="h-full p-4">
+              <ScrollArea className="h-full">
+                <pre className="text-sm bg-muted p-4 rounded-lg overflow-x-auto">
+                  <code>{displayCode || '// Nessun codice generato ancora'}</code>
+                </pre>
+              </ScrollArea>
             </div>
           )}
         </div>

@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Talenti from "./pages/Talenti";
 import Editor from "./pages/Editor";
+import Dashboard from "./pages/Dashboard";
 import { AuthProvider } from "@/integrations/supabase/AuthProvider";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/talenti" element={<Talenti />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/editor/:projectId" element={<Editor />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
