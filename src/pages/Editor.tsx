@@ -393,7 +393,18 @@ const Editor = () => {
     );
   }
 
-  const currentCode = currentSnapshot?.state?.html || currentSnapshot?.state?.generatedCode || currentSnapshot?.state || '';
+  // Safely extract HTML/code string from snapshot.state
+  const extractHtml = (state: any): string | null => {
+    if (!state) return null;
+    if (typeof state === 'string') return state;
+    if (typeof state.html === 'string') return state.html;
+    if (typeof state.generatedCode === 'string') return state.generatedCode;
+    if (typeof state.code === 'string') return state.code;
+    return null;
+  };
+
+  const currentCode = extractHtml(currentSnapshot?.state) ?? '';
+  const displayCode = currentCode || (currentSnapshot?.state ? JSON.stringify(currentSnapshot.state, null, 2) : '');
 
   return (
     <div className="h-screen flex flex-col bg-background">
