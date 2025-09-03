@@ -127,10 +127,10 @@ const Editor = () => {
           console.error('Error fetching prompts:', promptsError);
         } else {
           // Convert prompts to chat messages (text only, no code)
-          const messages: ChatMessage[] = [];
+          const tempMessages: ChatMessage[] = [];
           promptsData.forEach((prompt: any) => {
             // User message
-            messages.push({
+            tempMessages.push({
               id: `user-${prompt.id}`,
               type: 'user',
               content: prompt.prompt_text,
@@ -147,7 +147,7 @@ const Editor = () => {
                 // Extract only explanation/content, not the generated code
                 const aiContent = response.explanation || response.content || "Code generated successfully!";
                 
-                messages.push({
+                tempMessages.push({
                   id: `ai-${prompt.id}`,
                   type: 'ai',
                   content: aiContent,
@@ -155,7 +155,7 @@ const Editor = () => {
                   tokens_used: prompt.tokens_used
                 });
               } catch {
-                messages.push({
+                tempMessages.push({
                   id: `ai-${prompt.id}`,
                   type: 'ai',
                   content: "Code generated successfully!",
@@ -165,7 +165,7 @@ const Editor = () => {
               }
             }
           });
-          setChatMessages(messages);
+          setChatMessages(tempMessages);
         }
 
         // Fetch snapshots and get the latest one for preview
