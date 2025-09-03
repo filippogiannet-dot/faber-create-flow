@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/integrations/supabase/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   ArrowLeft, 
   Settings, 
@@ -17,13 +16,12 @@ import {
   ExternalLink, 
   Smartphone, 
   Tablet, 
-  Maximize, 
-  Send, 
-  Paperclip,
+  Send,
   Github,
   Database,
   ChevronDown,
-  MoreHorizontal
+  User,
+  Bot
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,9 +31,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface Message {
+interface ChatMessage {
   id: string;
-  type: 'user' | 'ai';
+  type: 'user' | 'ai' | 'system';
   content: string;
   timestamp: Date;
   tokens_used?: number;
@@ -51,6 +49,14 @@ interface Project {
   updated_at: string;
 }
 
+interface Snapshot {
+  id: string;
+  project_id: string;
+  version: number;
+  state: any;
+  created_at: string;
+}
+
 type ViewMode = 'preview' | 'code';
 type DeviceSize = 'mobile' | 'tablet' | 'desktop';
 
@@ -61,14 +67,15 @@ const Editor = () => {
   const { toast } = useToast();
   
   const [project, setProject] = useState<Project | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [currentSnapshot, setCurrentSnapshot] = useState<Snapshot | null>(null);
   const [newPrompt, setNewPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
   const [deviceSize, setDeviceSize] = useState<DeviceSize>('desktop');
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -81,30 +88,22 @@ const Editor = () => {
     }
   }, [user, loading, navigate]);
 
-  // Fetch project data
+  // Fetch project data and setup realtime subscriptions
   useEffect(() => {
     if (!projectId || !user) return;
 
-    const fetchProject = async () => {
+    const fetchProjectData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch project metadata
+        const { data: projectData, error: projectError } = await supabase
           .from('projects')
-          .select(`
-            *,
-            prompts (
-              id,
-              prompt_text,
-              ai_response,
-              tokens_used,
-              created_at
-            )
-          `)
+          .select('*')
           .eq('id', projectId)
           .eq('owner_id', user.id)
           .single();
 
-        if (error) {
-          console.error('Error fetching project:', error);
+        if (projectError) {
+          console.error('Error fetching project:', projectError);
           toast({
             title: "Error",
             description: "Failed to load project. Redirecting to dashboard.",
@@ -114,50 +113,77 @@ const Editor = () => {
           return;
         }
 
-        setProject(data);
-        setProjectName(data.name);
-        
-        // Convert prompts to messages
-        const projectMessages: Message[] = [];
-        if (data.prompts && data.prompts.length > 0) {
-          data.prompts.forEach((prompt: any) => {
-            // Add user message
-            projectMessages.push({
+        setProject(projectData);
+        setProjectName(projectData.name);
+
+        // Fetch chat history from prompts table
+        const { data: promptsData, error: promptsError } = await supabase
+          .from('prompts')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: true });
+
+        if (promptsError) {
+          console.error('Error fetching prompts:', promptsError);
+        } else {
+          // Convert prompts to chat messages (text only, no code)
+          const messages: ChatMessage[] = [];
+          promptsData.forEach((prompt: any) => {
+            // User message
+            messages.push({
               id: `user-${prompt.id}`,
               type: 'user',
               content: prompt.prompt_text,
               timestamp: new Date(prompt.created_at)
             });
             
-            // Add AI response if exists
+            // AI response (extract explanation only, not code)
             if (prompt.ai_response) {
-              let aiContent = '';
               try {
                 const response = typeof prompt.ai_response === 'string' 
                   ? JSON.parse(prompt.ai_response) 
                   : prompt.ai_response;
-                aiContent = response.content || response.generatedCode || JSON.stringify(response);
                 
-                // Update generated code with latest response
-                if (response.generatedCode) {
-                  setGeneratedCode(response.generatedCode);
-                }
+                // Extract only explanation/content, not the generated code
+                const aiContent = response.explanation || response.content || "Code generated successfully!";
+                
+                messages.push({
+                  id: `ai-${prompt.id}`,
+                  type: 'ai',
+                  content: aiContent,
+                  timestamp: new Date(prompt.created_at),
+                  tokens_used: prompt.tokens_used
+                });
               } catch {
-                aiContent = prompt.ai_response.toString();
+                messages.push({
+                  id: `ai-${prompt.id}`,
+                  type: 'ai',
+                  content: "Code generated successfully!",
+                  timestamp: new Date(prompt.created_at),
+                  tokens_used: prompt.tokens_used
+                });
               }
-              
-              projectMessages.push({
-                id: `ai-${prompt.id}`,
-                type: 'ai',
-                content: aiContent,
-                timestamp: new Date(prompt.created_at),
-                tokens_used: prompt.tokens_used
-              });
             }
           });
+          setChatMessages(messages);
         }
-        
-        setMessages(projectMessages);
+
+        // Fetch snapshots and get the latest one for preview
+        const { data: snapshotsData, error: snapshotsError } = await supabase
+          .from('snapshots')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('version', { ascending: false });
+
+        if (snapshotsError) {
+          console.error('Error fetching snapshots:', snapshotsError);
+        } else {
+          setSnapshots(snapshotsData);
+          if (snapshotsData.length > 0) {
+            setCurrentSnapshot(snapshotsData[0]); // Latest snapshot
+          }
+        }
+
       } catch (error) {
         console.error('Error:', error);
         toast({
@@ -168,26 +194,53 @@ const Editor = () => {
       }
     };
 
-    fetchProject();
+    fetchProjectData();
+
+    // Setup realtime subscription for snapshots
+    const snapshotsChannel = supabase
+      .channel('snapshots-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'snapshots',
+          filter: `project_id=eq.${projectId}`
+        },
+        (payload) => {
+          const newSnapshot = payload.new as Snapshot;
+          setSnapshots(prev => [newSnapshot, ...prev]);
+          setCurrentSnapshot(newSnapshot);
+          setPreviewKey(prev => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(snapshotsChannel);
+    };
   }, [projectId, user, navigate, toast]);
 
-  // Scroll to bottom when new messages arrive
+  // Auto-scroll chat to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [chatMessages]);
 
   const handleSendPrompt = async () => {
     if (!newPrompt.trim() || !project || !session || isGenerating) return;
 
     setIsGenerating(true);
-    const userMessage: Message = {
+    
+    // Add user message to chat immediately
+    const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       type: 'user',
       content: newPrompt.trim(),
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setChatMessages(prev => [...prev, userMessage]);
+    const promptText = newPrompt.trim();
     setNewPrompt("");
 
     try {
@@ -199,8 +252,8 @@ const Editor = () => {
         },
         body: JSON.stringify({
           projectId: project.id,
-          prompt: newPrompt.trim(),
-          isInitial: messages.length === 0
+          prompt: promptText,
+          isInitial: chatMessages.length === 0
         }),
       });
 
@@ -210,22 +263,26 @@ const Editor = () => {
         throw new Error(data.error || 'Generation failed');
       }
 
-      // Add AI response message
-      const aiMessage: Message = {
+      // Add AI explanation to chat (not the code)
+      const aiMessage: ChatMessage = {
         id: `ai-${Date.now()}`,
         type: 'ai',
-        content: data.content || data.generatedCode || 'Code generated successfully!',
+        content: data.explanation || data.content || 'Code generated successfully!',
         timestamp: new Date(),
         tokens_used: data.tokensUsed
       };
 
-      setMessages(prev => [...prev, aiMessage]);
+      setChatMessages(prev => [...prev, aiMessage]);
 
-      // Update generated code
-      if (data.generatedCode) {
-        setGeneratedCode(data.generatedCode);
-        setPreviewKey(prev => prev + 1); // Force preview refresh
-      }
+      // Add system message for applied changes
+      const systemMessage: ChatMessage = {
+        id: `system-${Date.now()}`,
+        type: 'system',
+        content: `Applied changes • Version ${data.version || 'unknown'}`,
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, systemMessage]);
 
       toast({
         title: "Success",
@@ -234,13 +291,13 @@ const Editor = () => {
 
     } catch (error) {
       console.error('Generation error:', error);
-      const errorMessage: Message = {
+      const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
         type: 'ai',
         content: `Error: ${error instanceof Error ? error.message : 'Generation failed'}`,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setChatMessages(prev => [...prev, errorMessage]);
       
       toast({
         title: "Error",
@@ -291,16 +348,23 @@ const Editor = () => {
 
   const refreshPreview = () => {
     setPreviewKey(prev => prev + 1);
-    if (iframeRef.current) {
-      iframeRef.current.src = iframeRef.current.src;
-    }
   };
 
   const openInNewTab = () => {
-    if (generatedCode) {
-      const blob = new Blob([generatedCode], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
+    if (currentSnapshot?.state) {
+      try {
+        const htmlContent = currentSnapshot.state.html || currentSnapshot.state.generatedCode || currentSnapshot.state;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch (error) {
+        console.error('Error opening in new tab:', error);
+        toast({
+          title: "Error",
+          description: "Failed to open preview in new tab",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -329,10 +393,12 @@ const Editor = () => {
     );
   }
 
+  const currentCode = currentSnapshot?.state?.html || currentSnapshot?.state?.generatedCode || currentSnapshot?.state || '';
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4">
+      <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 flex-shrink-0 z-10">
         {/* Left - Project Menu */}
         <div className="flex items-center space-x-4">
           <DropdownMenu>
@@ -446,53 +512,85 @@ const Editor = () => {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Sidebar - Chat */}
-        <div className="w-96 border-r border-border flex flex-col bg-card/30">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <p>Start a conversation to generate your app</p>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div key={message.id} className={`space-y-2 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
-                  <div className={`inline-block max-w-[85%] p-3 rounded-lg ${
-                    message.type === 'user' 
-                      ? 'bg-primary text-primary-foreground ml-auto' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    <pre className="whitespace-pre-wrap text-sm font-mono">
-                      {message.content}
-                    </pre>
-                    {message.tokens_used && (
-                      <div className="text-xs opacity-70 mt-2">
-                        {message.tokens_used} tokens
+      <div className="flex-1 flex min-h-0">
+        {/* Sidebar - Chat (fixed width, independent scroll) */}
+        <div className="w-96 border-r border-border flex flex-col bg-card/30 flex-shrink-0">
+          {/* Chat Messages */}
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {chatMessages.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>Start a conversation to generate your app</p>
+                </div>
+              ) : (
+                chatMessages.map((message) => (
+                  <div key={message.id} className={`space-y-2 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
+                    {message.type === 'system' ? (
+                      <div className="text-center py-2">
+                        <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                          {message.content}
+                        </span>
                       </div>
+                    ) : (
+                      <>
+                        <div className={`inline-flex items-start space-x-2 max-w-[85%] ${
+                          message.type === 'user' ? 'flex-row-reverse space-x-reverse ml-auto' : ''
+                        }`}>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            message.type === 'user' ? 'bg-primary' : 'bg-muted'
+                          }`}>
+                            {message.type === 'user' ? (
+                              <User className="w-3 h-3 text-primary-foreground" />
+                            ) : (
+                              <Bot className="w-3 h-3 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className={`p-3 rounded-lg ${
+                            message.type === 'user' 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            <div className="text-sm whitespace-pre-wrap">
+                              {message.content}
+                            </div>
+                            {message.tokens_used && (
+                              <div className="text-xs opacity-70 mt-2">
+                                {message.tokens_used} tokens
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className={`text-xs text-muted-foreground ${
+                          message.type === 'user' ? 'text-right' : 'text-left'
+                        }`}>
+                          {message.timestamp.toLocaleTimeString()}
+                        </div>
+                      </>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {message.timestamp.toLocaleTimeString()}
+                ))
+              )}
+              {isGenerating && (
+                <div className="text-left">
+                  <div className="inline-flex items-start space-x-2 max-w-[85%]">
+                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-3 h-3 text-muted-foreground" />
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        <span className="text-sm">Generating...</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))
-            )}
-            {isGenerating && (
-              <div className="text-left">
-                <div className="inline-block bg-muted p-3 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                    <span className="text-sm">Generating...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
 
-          {/* Input */}
-          <div className="p-4 border-t border-border">
+          {/* Chat Input */}
+          <div className="p-4 border-t border-border flex-shrink-0">
             <div className="space-y-2">
               <Textarea
                 placeholder="Describe what you want to build..."
@@ -507,10 +605,7 @@ const Editor = () => {
                 rows={3}
                 className="resize-none"
               />
-              <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm">
-                  <Paperclip className="w-4 h-4" />
-                </Button>
+              <div className="flex items-center justify-end">
                 <Button 
                   onClick={handleSendPrompt} 
                   disabled={!newPrompt.trim() || isGenerating}
@@ -523,29 +618,29 @@ const Editor = () => {
           </div>
         </div>
 
-        {/* Main Area - Preview/Code */}
-        <div className="flex-1 flex flex-col">
+        {/* Main Area - Preview/Code (fills remaining space) */}
+        <div className="flex-1 flex flex-col min-w-0">
           {viewMode === 'preview' ? (
-            <div className="flex-1 p-4 bg-muted/20">
+            <div className="flex-1 p-6 bg-muted/20 flex items-center justify-center">
               <div 
-                className="h-full mx-auto bg-background rounded-lg border border-border overflow-hidden"
-                style={{ width: getDeviceWidth() }}
+                className="h-full mx-auto bg-background rounded-lg border border-border overflow-hidden shadow-lg"
+                style={{ width: getDeviceWidth(), maxHeight: 'calc(100vh - 120px)' }}
               >
-                {generatedCode ? (
+                {currentCode ? (
                   <iframe
                     key={previewKey}
                     ref={iframeRef}
-                    srcDoc={generatedCode}
+                    srcDoc={currentCode}
                     className="w-full h-full"
-                    title="Preview"
-                    sandbox="allow-scripts allow-forms"
+                    title="App Preview"
+                    sandbox="allow-scripts allow-forms allow-same-origin"
                   />
                 ) : (
                   <div className="h-full flex items-center justify-center text-muted-foreground">
                     <div className="text-center">
                       <Monitor className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No preview available</p>
-                      <p className="text-sm">Start generating to see preview</p>
+                      <p className="text-sm">Start generating to see your app</p>
                     </div>
                   </div>
                 )}
@@ -553,12 +648,14 @@ const Editor = () => {
             </div>
           ) : (
             <div className="flex-1 p-4">
-              <Card className="h-full">
+              <div className="h-full bg-card rounded-lg border border-border">
                 <div className="h-full p-4">
-                  {generatedCode ? (
-                    <pre className="h-full overflow-auto text-sm bg-muted/50 p-4 rounded">
-                      <code>{generatedCode}</code>
-                    </pre>
+                  {currentCode ? (
+                    <ScrollArea className="h-full">
+                      <pre className="text-sm bg-muted/50 p-4 rounded">
+                        <code>{currentCode}</code>
+                      </pre>
+                    </ScrollArea>
                   ) : (
                     <div className="h-full flex items-center justify-center text-muted-foreground">
                       <div className="text-center">
@@ -569,7 +666,7 @@ const Editor = () => {
                     </div>
                   )}
                 </div>
-              </Card>
+              </div>
             </div>
           )}
         </div>
