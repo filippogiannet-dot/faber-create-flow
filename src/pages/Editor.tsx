@@ -461,7 +461,7 @@ const Editor = () => {
           .order('version', { ascending: false })
           .limit(1)
           .single();
-        if (!snapError && latestSnap?.state?.html) {
+        if (!snapError && latestSnap?.state && typeof latestSnap.state === 'object' && 'html' in latestSnap.state) {
           setOptimisticHtml(latestSnap.state.html as string);
           setPreviewKey(prev => prev + 1);
         }
