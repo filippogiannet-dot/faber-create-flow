@@ -560,18 +560,23 @@ Request: "${prompt}"
     await logStep(supabaseClient, projectId, 'saving', 'started');
 
     if (generatedCode.files && Array.isArray(generatedCode.files)) {
-      const fileInserts = (generatedCode.files as any[])
-        .filter((file: any) => file && typeof file.path === 'string' && typeof file.content === 'string')
-        .map((file: any) => ({
-          project_id: projectId,
-          file_path: file.path,
-          file_content: file.content,
-          file_type: getFileType(file.path)
-        }));
+      const validFiles = (generatedCode.files as any[])
+        .filter((file: any) => file && typeof file.path === 'string' && typeof file.content === 'string');
+      // Deduplicate by file_path (last one wins)
+      const byPath = new Map<string, any>();
+      for (const f of validFiles) {
+        byPath.set(f.path, f);
+      }
+      const fileInserts = Array.from(byPath.values()).map((file: any) => ({
+        project_id: projectId,
+        file_path: file.path,
+        file_content: file.content,
+        file_type: getFileType(file.path)
+      }));
 
       const { error: filesError } = await supabaseClient
         .from('project_files')
-        .upsert(fileInserts);
+        .upsert(fileInserts, { onConflict: 'project_id,file_path' });
 
       if (filesError) {
         log('ERROR', 'Failed to save files', { requestId, error: filesError });
