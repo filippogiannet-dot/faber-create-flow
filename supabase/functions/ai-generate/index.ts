@@ -163,7 +163,8 @@ function extractProjectName(prompt: string): string {
 
 // Get file type from path
 function getFileType(filePath: string): string {
-  const extension = filePath.split('.').pop()?.toLowerCase();
+  if (!filePath || typeof filePath !== 'string') return 'text';
+  const extension = String(filePath).split('.').pop()?.toLowerCase();
   const typeMap: Record<string, string> = {
     'js': 'javascript',
     'jsx': 'javascript', 
@@ -510,12 +511,14 @@ CRITICAL RULES:
     await logStep(supabaseClient, projectId, 'saving', 'started');
 
     if (generatedCode.files && Array.isArray(generatedCode.files)) {
-      const fileInserts = generatedCode.files.map((file: any) => ({
-        project_id: projectId,
-        file_path: file.path,
-        file_content: file.content,
-        file_type: getFileType(file.path)
-      }));
+      const fileInserts = (generatedCode.files as any[])
+        .filter((file: any) => file && typeof file.path === 'string' && typeof file.content === 'string')
+        .map((file: any) => ({
+          project_id: projectId,
+          file_path: file.path,
+          file_content: file.content,
+          file_type: getFileType(file.path)
+        }));
 
       const { error: filesError } = await supabaseClient
         .from('project_files')
@@ -633,7 +636,7 @@ CRITICAL RULES:
       requestId,
       userId: user.id, 
       projectId, 
-      tokensUsed, 
+      tokensUsed: response.tokensUsed, 
       version: nextVersion 
     });
 
