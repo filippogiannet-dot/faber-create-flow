@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import JSZip from "jszip";
 
 interface ChatMessage {
   id: string;
@@ -621,6 +622,24 @@ const Editor = () => {
     }
   };
 
+  const exportAsZip = async () => {
+    if (!projectFiles || projectFiles.length === 0) return;
+    const zip = new JSZip();
+    for (const file of projectFiles) {
+      zip.file(file.file_path, file.file_content);
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (project?.name || 'project').toLowerCase().replace(/[^a-z0-9-_.]+/g, '-');
+    a.href = url;
+    a.download = `${safeName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const getCurrentCode = () => {
     if (projectFiles.length === 0) return '';
     
@@ -632,6 +651,7 @@ const Editor = () => {
     
     return appFile?.file_content || '';
   };
+
 
   if (loading) {
     return (
@@ -770,6 +790,14 @@ const Editor = () => {
               </Button>
             </div>
           )}
+
+          <Button
+            size="sm"
+            onClick={exportAsZip}
+            className="text-xs"
+          >
+            Esporta ZIP
+          </Button>
           
           <Button
             variant="ghost"

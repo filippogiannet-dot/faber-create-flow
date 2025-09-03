@@ -451,79 +451,108 @@ Request: "${prompt}"
     // Generate code with the new structured approach
     await logStep(supabaseClient, projectId, 'generation', 'started');
 
+    // Load strict system prompt from prompt.txt (no markdown, strict JSON schema)
+    const systemPrompt = await (async () => {
+      try {
+        const url = new URL('./prompt.txt', import.meta.url);
+        const txt = await Deno.readTextFile(url);
+        return txt && txt.trim().length > 0 ? txt : 'You are an expert React code generator. Output STRICT JSON only.';
+      } catch (_e) {
+        return 'You are an expert React code generator. Output STRICT JSON only.';
+      }
+    })();
+
     const codePrompt = `
-Generate a complete web application for: ${prompt}
+    Generate a complete web application for: ${prompt}
 
-Technical specifications:
-${JSON.stringify(analysis)}
+    Technical specifications:
+    ${JSON.stringify(analysis)}
 
-RESPOND WITH VALID JSON ONLY:
-{
-  "files": [
-    {
-      "path": "package.json",
-      "content": "complete package.json content"
-    },
-    {
-      "path": "public/index.html",
-      "content": "complete HTML with React setup"
-    },
-    {
-      "path": "src/App.tsx",
-      "content": "complete React component code"
-    }
-  ],
-  "explanation": "Brief explanation of what was built"
-}
+    IMPORTANT:
+    - Output STRICT JSON only (no markdown, no code fences, no explanations)
+    - Schema:
+      {
+        "files": [
+          { "path": "public/index.html", "content": "..." },
+          { "path": "src/App.tsx", "content": "..." }
+        ],
+        "explanation": "short summary"
+      }
+    - Do not include placeholders or TODOs
+    - Use Tailwind CSS where applicable
+    - TypeScript for .tsx files
+    `;
 
-CRITICAL RULES:
-- Generate 100% functional code
-- Use Tailwind CSS for all styling
-- Create clean, modular React components
-- Include proper TypeScript types
-- Responsive design
-- NO placeholders or TODOs
-- All code must be complete and ready to run
-`;
+    // Attempt generation with robust JSON parsing + retries on invalid JSON
+    let generatedCode: any = null;
+    let lastParseError: any = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const attemptPrompt = attempt === 0
+        ? codePrompt
+        : `${codePrompt}\n\nYour previous output was invalid JSON. Reprint STRICT JSON that conforms EXACTLY to the schema. No prose.`;
 
-    const codeData = await callOpenAI(codePrompt, 'You are an expert React developer. Generate complete, functional code. Respond with valid JSON only.');
-    let generatedCode;
-    try {
-      const rawContent = (codeData?.choices?.[0]?.message?.content ?? '').toString();
-      const cleaned = rawContent
-        .trim()
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```$/i, '')
-        .trim();
-      generatedCode = JSON.parse(cleaned);
-      await logStep(supabaseClient, projectId, 'generation', 'completed');
-    } catch (parseError) {
-      // Robust fallback: extract JSON object from response
-      const content = (codeData?.choices?.[0]?.message?.content ?? '').toString();
-      const first = content.indexOf('{');
-      const last = content.lastIndexOf('}');
-      if (first !== -1 && last !== -1 && last > first) {
-        const candidate = content.slice(first, last + 1);
-        try {
-          generatedCode = JSON.parse(candidate);
-          await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true, method: 'slice' });
-        } catch (e2) {
-          // Try again after removing trailing commas
-          const noTrailingCommas = candidate.replace(/,\s*([}\]])/g, '$1');
+      const codeData = await callOpenAI(attemptPrompt, systemPrompt);
+
+      try {
+        const rawContent = (codeData?.choices?.[0]?.message?.content ?? '').toString();
+        const cleaned = rawContent
+          .trim()
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/```$/i, '')
+          .trim();
+        generatedCode = JSON.parse(cleaned);
+        await logStep(supabaseClient, projectId, 'generation', 'completed', { attempt });
+        lastParseError = null;
+        break;
+      } catch (_parseError) {
+        // Robust fallback: extract JSON object from response and try fixes
+        const content = (codeData?.choices?.[0]?.message?.content ?? '').toString();
+        const first = content.indexOf('{');
+        const last = content.lastIndexOf('}');
+        if (first !== -1 && last !== -1 && last > first) {
+          const candidate = content.slice(first, last + 1);
           try {
-            generatedCode = JSON.parse(noTrailingCommas);
-            await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true, method: 'comma-fix' });
-          } catch (e3) {
-            log('ERROR', 'Failed to parse AI JSON', { requestId, preview: content.slice(0, 400) });
-            throw new Error('AI response not in correct JSON format');
+            generatedCode = JSON.parse(candidate);
+            await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true, method: 'slice', attempt });
+            lastParseError = null;
+            break;
+          } catch (_e2) {
+            const noTrailingCommas = candidate.replace(/,\s*([}\]])/g, '$1');
+            try {
+              generatedCode = JSON.parse(noTrailingCommas);
+              await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true, method: 'comma-fix', attempt });
+              lastParseError = null;
+              break;
+            } catch (e3) {
+              lastParseError = e3;
+              log('ERROR', 'Failed to parse AI JSON on attempt', { requestId, attempt, preview: content.slice(0, 400) });
+            }
           }
+        } else {
+          lastParseError = new Error('No JSON braces found in AI response');
+          log('ERROR', 'No JSON braces found in AI response', { requestId, attempt, preview: content.slice(0, 200) });
         }
-      } else {
-        log('ERROR', 'No JSON braces found in AI response', { requestId, preview: content.slice(0, 200) });
-        throw new Error('No JSON found in AI response');
       }
     }
+
+    if (!generatedCode) {
+      throw new Error(lastParseError?.message || 'AI response not in correct JSON format');
+    }
+
+    // Normalize files to ensure { path, content } shape (support name/folder as well)
+    if (generatedCode?.files && Array.isArray(generatedCode.files)) {
+      generatedCode.files = generatedCode.files
+        .filter((f: any) => f && (typeof f.path === 'string' || typeof f.name === 'string') && typeof f.content === 'string')
+        .map((f: any) => {
+          if (f.path) return { path: f.path, content: f.content };
+          const folder = (f.folder || '').toString().replace(/^\/+|\/+$/g, '');
+          const name = (f.name || '').toString().replace(/^\/+|\/+$/g, '');
+          const path = folder ? `${folder}/${name}` : name;
+          return { path, content: f.content };
+        });
+    }
+
 
     // Save generated files to the database
     await logStep(supabaseClient, projectId, 'saving', 'started');
