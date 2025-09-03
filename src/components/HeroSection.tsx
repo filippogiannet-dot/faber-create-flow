@@ -76,8 +76,8 @@ const HeroSection = () => {
           description: "La tua applicazione è stata creata",
         });
         
-        // TODO: Navigate to project view or display results
-        console.log("Generation successful:", result);
+        // Redirect to editor
+        navigate(`/editor/${project.id}`);
       } else {
         toast({
           variant: "destructive",
