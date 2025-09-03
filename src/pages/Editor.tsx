@@ -84,6 +84,7 @@ const Editor = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
+  const [optimisticHtml, setOptimisticHtml] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -452,6 +453,19 @@ const Editor = () => {
         // Fetch project files
         await fetchProjectFiles();
 
+        // Load latest snapshot compiled HTML, if available
+        const { data: latestSnap, error: snapError } = await supabase
+          .from('snapshots')
+          .select('state')
+          .eq('project_id', projectId)
+          .order('version', { ascending: false })
+          .limit(1)
+          .single();
+        if (!snapError && latestSnap?.state?.html) {
+          setOptimisticHtml(latestSnap.state.html as string);
+          setPreviewKey(prev => prev + 1);
+        }
+        
       } catch (error) {
         console.error('Error fetching project data:', error);
         toast({
@@ -544,6 +558,12 @@ const Editor = () => {
           title: "Codice aggiornato",
           description: "L'applicazione è stata modificata con successo",
         });
+
+        // Optimistic preview update with compiled html (if provided)
+        if (result.html) {
+          setOptimisticHtml(result.html);
+          setPreviewKey(prev => prev + 1);
+        }
 
         // Refresh files after generation
         await fetchProjectFiles();
@@ -669,7 +689,7 @@ const Editor = () => {
     );
   }
 
-  const currentHtml = generatePreviewHtml(projectFiles);
+  const currentHtml = optimisticHtml || generatePreviewHtml(projectFiles);
   const displayCode = getCurrentCode();
 
   return (

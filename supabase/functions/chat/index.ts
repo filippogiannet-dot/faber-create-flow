@@ -61,11 +61,11 @@ serve(async (req: Request) => {
     // Fetch a lightweight code context to help the model
     const { data: files } = await supabase
       .from("project_files")
-      .select("file_path, content")
+      .select("file_path, file_content")
       .eq("project_id", projectId)
       .limit(30);
 
-    const context = `\n\nCurrent codebase files (truncated):\n${JSON.stringify((files || []).map(f => ({ file_path: f.file_path, content: (f.content || '').slice(0, 2000) })), null, 2)}`;
+    const context = `\n\nCurrent codebase files (truncated):\n${JSON.stringify((files || []).map(f => ({ file_path: f.file_path, content: (f.file_content || '').slice(0, 2000) })), null, 2)}`;
 
     if (stream) {
       return new Response(JSON.stringify({ error: "Streaming not enabled in chat yet" }), {

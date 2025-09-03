@@ -24,7 +24,7 @@ async function readSystemPrompt(): Promise<string> {
 async function getCodeContext(supabase: any, projectId: string) {
   const { data, error } = await supabase
     .from("project_files")
-    .select("file_path, content")
+    .select("file_path, file_content")
     .eq("project_id", projectId)
     .limit(50);
 
@@ -35,7 +35,7 @@ async function getCodeContext(supabase: any, projectId: string) {
 
   return (data || []).map((f: any) => ({
     file_path: f.file_path,
-    content: (f.content || "").slice(0, 4000),
+    content: (f.file_content || "").slice(0, 4000),
   }));
 }
 

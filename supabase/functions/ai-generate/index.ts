@@ -595,7 +595,44 @@ Request: "${prompt}"
       }
     }
 
-    // Update project with structured data
+    // Compile generated files into an executable HTML bundle using Babel in-browser runtime
+    const htmlBundle = (() => {
+      try {
+        const filesArr = Array.isArray(generatedCode.files) ? generatedCode.files : [];
+        const htmlFile = filesArr.find((f: any) => f.path === 'public/index.html');
+        let html = htmlFile?.content || `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${extractProjectName(prompt)}</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`;
+
+        const tsxFiles = filesArr.filter((f: any) => /\.(tsx|jsx)$/.test(f.path));
+        const combined = tsxFiles.map((f: any) => `// ${f.path}\n${f.content}`).join('\n\n');
+
+        const bodyClose = html.lastIndexOf('</body>');
+        const script = `\n<script type="text/babel" data-presets="typescript,react">\ntry {\n  ${combined}\n  const rootEl = document.getElementById('root') || (() => { const d = document.createElement('div'); d.id = 'root'; document.body.appendChild(d); return d; })();\n  const root = ReactDOM.createRoot(rootEl);\n  if (typeof App !== 'undefined') {\n    root.render(<App />);\n  } else if (typeof Root !== 'undefined') {\n    root.render(<Root />);\n  } else {\n    root.render(React.createElement('div', { className: 'p-6 text-gray-800' }, 'Nessun componente App/Root trovato'));\n  }\n} catch (e) {\n  console.error(e);\n  document.body.innerHTML = '<pre style="padding:16px;color:#b91c1c;background:#fee2e2;">' + (e && e.stack ? e.stack : String(e)) + '</pre>';\n}\n</script>\n`;
+        if (bodyClose !== -1) {
+          html = html.slice(0, bodyClose) + script + html.slice(bodyClose);
+        } else {
+          html += script;
+        }
+        return html;
+      } catch (e) {
+        return `<!DOCTYPE html><html><body><pre>Errore compilazione: ${String(e)}</pre></body></html>`;
+      }
+    })();
+
+    // Update project with structured data (including compiled HTML)
     const updateData = {
       generation_status: 'completed',
       original_prompt: prompt,
@@ -604,6 +641,7 @@ Request: "${prompt}"
       state: {
         ...project.state,
         files: generatedCode.files,
+        html: htmlBundle,
         lastModified: new Date().toISOString()
       },
       updated_at: new Date().toISOString()
@@ -630,7 +668,8 @@ Request: "${prompt}"
         prompt_text: prompt,
         ai_response: {
           explanation: generatedCode.explanation || 'Code generated successfully',
-          files: generatedCode.files
+          files: generatedCode.files,
+          raw_text: (lastCodeData?.choices?.[0]?.message?.content ?? '')
         },
         tokens_used: lastCodeData?.usage?.total_tokens || 0
       })
@@ -641,7 +680,7 @@ Request: "${prompt}"
       log('ERROR', 'Failed to save prompt', { requestId, error: promptError });
     }
 
-    // Create snapshot
+    // Create snapshot with compiled HTML inside state
     const { data: snapshots } = await supabaseClient
       .from('snapshots')
       .select('version')
@@ -663,6 +702,8 @@ Request: "${prompt}"
     if (snapshotError) {
       log('ERROR', 'Failed to create snapshot', { requestId, error: snapshotError });
     }
+
+    log('INFO', 'Compiled HTML bundle generated', { requestId, htmlLength: htmlBundle.length });
 
     // Increment usage counters
     const { error: usageError } = await supabaseClient
