@@ -489,20 +489,38 @@ CRITICAL RULES:
     const codeData = await callOpenAI(codePrompt, 'You are an expert React developer. Generate complete, functional code. Respond with valid JSON only.');
     let generatedCode;
     try {
-      generatedCode = JSON.parse(codeData.choices[0].message.content);
+      const rawContent = (codeData?.choices?.[0]?.message?.content ?? '').toString();
+      const cleaned = rawContent
+        .trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```$/i, '')
+        .trim();
+      generatedCode = JSON.parse(cleaned);
       await logStep(supabaseClient, projectId, 'generation', 'completed');
     } catch (parseError) {
-      // Fallback: try to extract JSON from response
-      const content = codeData.choices[0].message.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
+      // Robust fallback: extract JSON object from response
+      const content = (codeData?.choices?.[0]?.message?.content ?? '').toString();
+      const first = content.indexOf('{');
+      const last = content.lastIndexOf('}');
+      if (first !== -1 && last !== -1 && last > first) {
+        const candidate = content.slice(first, last + 1);
         try {
-          generatedCode = JSON.parse(jsonMatch[0]);
-          await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true });
+          generatedCode = JSON.parse(candidate);
+          await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true, method: 'slice' });
         } catch (e2) {
-          throw new Error('AI response not in correct JSON format');
+          // Try again after removing trailing commas
+          const noTrailingCommas = candidate.replace(/,\s*([}\]])/g, '$1');
+          try {
+            generatedCode = JSON.parse(noTrailingCommas);
+            await logStep(supabaseClient, projectId, 'generation', 'completed', { extracted: true, method: 'comma-fix' });
+          } catch (e3) {
+            log('ERROR', 'Failed to parse AI JSON', { requestId, preview: content.slice(0, 400) });
+            throw new Error('AI response not in correct JSON format');
+          }
         }
       } else {
+        log('ERROR', 'No JSON braces found in AI response', { requestId, preview: content.slice(0, 200) });
         throw new Error('No JSON found in AI response');
       }
     }
