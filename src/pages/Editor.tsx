@@ -594,11 +594,12 @@ const Editor = () => {
     if (!project || !projectName.trim()) return;
 
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ name: projectName })
-        .eq('id', project.id)
-        .eq('owner_id', user?.id);
+      const { error } = await supabase.functions.invoke('update-project', {
+        body: {
+          projectId: project.id,
+          updates: { name: projectName },
+        },
+      });
 
       if (error) throw error;
 

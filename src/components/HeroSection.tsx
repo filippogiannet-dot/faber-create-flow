@@ -36,15 +36,19 @@ const HeroSection = () => {
 
   const fetchRecentProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, name, description, messages_used, updated_at')
-        .eq('owner_id', user?.id)
-        .order('updated_at', { ascending: false })
-        .limit(50);
+      const resp = await fetch(
+        `https://rzbtrvceflkvrhphbksx.supabase.co/functions/v1/get-projects?status=active`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.access_token ?? ''}`,
+            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6YnRydmNlZmxrdnJocGhia3N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MjkyNDUsImV4cCI6MjA3MjQwNTI0NX0.8ajeq8EPBtr27fRs4NONXP2Bp8m5YDKm3AenlKRJY6o',
+          },
+        }
+      );
 
-      if (error) throw error;
-      setRecentProjects(data || []);
+      if (!resp.ok) throw new Error(`get-projects failed: ${resp.status}`);
+      const data = await resp.json();
+      setRecentProjects((data as any) || []);
     } catch (error) {
       console.error('Error fetching recent projects:', error);
     }
@@ -62,19 +66,16 @@ const HeroSection = () => {
     setIsGenerating(true);
     
     try {
-      // First, create a new project
-      const { data: project, error: projectError } = await supabase
-        .from('projects')
-        .insert({
+      // First, create a new project via Edge Function
+      const { data: created, error: projectError } = await supabase.functions.invoke('create-project', {
+        body: {
           name: `App: ${prompt.slice(0, 50)}...`,
           description: prompt,
-          owner_id: user.id,
-          state: { isNew: true },
           libraries: ['react', 'typescript', 'tailwindcss'],
-          generation_status: 'generating'
-        })
-        .select()
-        .single();
+        },
+      });
+
+      const project: any = (created as any)?.project ?? (created as any);
 
       if (projectError) {
         console.error('Project creation error:', projectError);
@@ -102,37 +103,43 @@ const HeroSection = () => {
         if (genError) {
           console.error('Generation error:', genError);
           // Update project status to failed
-          supabase
-            .from('projects')
-            .update({ 
-              generation_status: 'failed',
-              error_message: genError.message || "Errore durante la generazione"
-            })
-            .eq('id', project.id);
+          supabase.functions.invoke('update-project', {
+            body: {
+              projectId: project.id,
+              updates: {
+                generation_status: 'failed',
+                error_message: genError.message || 'Errore durante la generazione',
+              },
+            },
+          });
         } else if (result.success) {
           console.log('Generation completed successfully');
           // The realtime subscription in Editor will handle the update
         } else {
           console.error('Generation failed:', result.error);
           // Update project status to failed
-          supabase
-            .from('projects')
-            .update({ 
-              generation_status: 'failed',
-              error_message: result.error || "Generazione fallita"
-            })
-            .eq('id', project.id);
+          supabase.functions.invoke('update-project', {
+            body: {
+              projectId: project.id,
+              updates: {
+                generation_status: 'failed',
+                error_message: result.error || 'Generazione fallita',
+              },
+            },
+          });
         }
       }).catch(error => {
         console.error('Unexpected generation error:', error);
         // Update project status to failed
-        supabase
-          .from('projects')
-          .update({ 
-            generation_status: 'failed',
-            error_message: "Si è verificato un errore imprevisto"
-          })
-          .eq('id', project.id);
+        supabase.functions.invoke('update-project', {
+          body: {
+            projectId: project.id,
+            updates: {
+              generation_status: 'failed',
+              error_message: 'Si è verificato un errore imprevisto',
+            },
+          },
+        });
       });
 
     } catch (error) {
