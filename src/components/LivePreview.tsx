@@ -1,6 +1,8 @@
 import { SandpackProvider, SandpackPreview, SandpackLayout, SandpackConsole } from "@codesandbox/sandpack-react";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { supabase } from "@/integrations/supabase/client";
+import { AlertTriangle, CheckCircle, Clock, Zap } from "lucide-react";
 
 interface FileData {
   path: string;
@@ -9,10 +11,65 @@ interface FileData {
 
 interface LivePreviewProps {
   files: FileData[];
+  onValidationChange?: (isValid: boolean, errors: any[]) => void;
 }
 
-export default function LivePreview({ files }: LivePreviewProps) {
+interface ValidationStatus {
+  status: 'idle' | 'validating' | 'success' | 'error';
+  errors: any[];
+  lastCheck: Date | null;
+}
+
+export default function LivePreview({ files, onValidationChange }: LivePreviewProps) {
   const [sandpackFiles, setSandpackFiles] = useState<Record<string, { code: string }>>({});
+  const [validation, setValidation] = useState<ValidationStatus>({
+    status: 'idle',
+    errors: [],
+    lastCheck: null
+  });
+
+  // Auto-validation when files change
+  useEffect(() => {
+    if (files.length > 0) {
+      validateFiles();
+    }
+  }, [files]);
+
+  const validateFiles = async () => {
+    setValidation(prev => ({ ...prev, status: 'validating' }));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("validate-code", {
+        body: { files, skipTypeCheck: false },
+      });
+
+      if (error) throw error;
+
+      const isValid = data.success;
+      const errors = data.errors || [];
+
+      setValidation({
+        status: isValid ? 'success' : 'error',
+        errors,
+        lastCheck: new Date()
+      });
+
+      onValidationChange?.(isValid, errors);
+
+      // Apply auto-fixes if available
+      if (data.fixedFiles && data.fixedFiles.length > 0) {
+        console.log('Auto-fixes applied:', data.fixes);
+      }
+
+    } catch (error) {
+      console.error('Validation failed:', error);
+      setValidation({
+        status: 'error',
+        errors: [{ message: 'Validation service error', severity: 'error' }],
+        lastCheck: new Date()
+      });
+    }
+  };
 
   useEffect(() => {
     // Build a safe default sandbox with Router + Tailwind and a loading UI
@@ -258,8 +315,87 @@ export default Badge;`);
     "keep-react": "latest",
   }), []);
 
+  // Status Bar Component
+  const StatusBar = () => {
+    const getStatusIcon = () => {
+      switch (validation.status) {
+        case 'validating': return <Clock className="h-4 w-4 animate-spin text-blue-400" />;
+        case 'success': return <CheckCircle className="h-4 w-4 text-green-400" />;
+        case 'error': return <AlertTriangle className="h-4 w-4 text-red-400" />;
+        default: return <Zap className="h-4 w-4 text-gray-400" />;
+      }
+    };
+
+    const getStatusText = () => {
+      switch (validation.status) {
+        case 'validating': return 'Analisi → Generazione → Fix → Build → Aggiornamento';
+        case 'success': return `Build riuscita • ${validation.errors.filter(e => e.severity === 'warning').length} warnings`;
+        case 'error': return `${validation.errors.filter(e => e.severity === 'error').length} errori • ${validation.errors.filter(e => e.severity === 'warning').length} warnings`;
+        default: return 'Pronto per la generazione';
+      }
+    };
+
+    return (
+      <div className="h-8 bg-gray-800 border-b border-gray-700 flex items-center px-4 text-sm">
+        <div className="flex items-center gap-2">
+          {getStatusIcon()}
+          <span className="text-gray-200">{getStatusText()}</span>
+        </div>
+        {validation.lastCheck && (
+          <div className="ml-auto text-xs text-gray-400">
+            Last check: {validation.lastCheck.toLocaleTimeString()}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Error Overlay Component
+  const ErrorOverlay = () => {
+    if (validation.status !== 'error' || validation.errors.length === 0) return null;
+
+    const criticalErrors = validation.errors.filter(e => e.severity === 'error');
+    if (criticalErrors.length === 0) return null;
+
+    return (
+      <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div className="bg-red-900/90 border border-red-600 rounded-lg p-6 max-w-2xl mx-4">
+          <div className="flex items-center gap-3 mb-4">
+            <AlertTriangle className="h-6 w-6 text-red-400" />
+            <h3 className="text-lg font-semibold text-white">Build Errors</h3>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {criticalErrors.slice(0, 5).map((error, index) => (
+              <div key={index} className="bg-black/30 rounded p-3 text-sm">
+                <div className="text-red-300 font-medium">
+                  {error.file}:{error.line}:{error.column}
+                </div>
+                <div className="text-gray-200 mt-1">{error.message}</div>
+                {error.code && (
+                  <div className="text-xs text-gray-400 mt-1">Code: {error.code}</div>
+                )}
+              </div>
+            ))}
+            {criticalErrors.length > 5 && (
+              <div className="text-gray-400 text-sm text-center">
+                +{criticalErrors.length - 5} more errors...
+              </div>
+            )}
+          </div>
+          <button 
+            onClick={validateFiles}
+            className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+          >
+            Retry Validation
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="h-full w-full bg-black">
+    <div className="h-full w-full bg-black relative">
+      <StatusBar />
       <ErrorBoundary>
         <SandpackProvider
           key={JSON.stringify(Object.keys(sandpackFiles).sort()) + ':' + Date.now()}
@@ -277,23 +413,24 @@ export default Badge;`);
             recompileDelay: 100
           }}
         >
-          <SandpackLayout style={{ height: "100vh", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
-            {/* Preview only - full height */}
-            <div style={{ flex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+          <SandpackLayout style={{ height: "calc(100vh - 2rem)", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
+            {/* Preview with Error Overlay */}
+            <div style={{ flex: 1, minHeight: "calc(100vh - 2rem)", display: "flex", flexDirection: "column", position: "relative" }}>
               <SandpackPreview 
                 style={{ 
-                  height: "100vh", 
+                  height: "calc(100vh - 12rem)", 
                   width: "100%",
                   backgroundColor: "hsl(0 0% 0%)",
                   border: "none"
                 }} 
                 showNavigator={false}
-                showRefreshButton={false}
+                showRefreshButton={true}
                 showOpenInCodeSandbox={false}
               />
+              <ErrorOverlay />
               <SandpackConsole
                 standalone={false}
-                showHeader={false}
+                showHeader={true}
                 resetOnPreviewRestart
                 style={{ height: 200, backgroundColor: "hsl(0 0% 5%)", borderTop: "1px solid hsl(0 0% 15%)" }}
               />

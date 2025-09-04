@@ -26,6 +26,7 @@ export default function Editor() {
   const [hasGeneratedOnce, setHasGeneratedOnce] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState<Array<{ path: string; content: string }>>([]);
   const [currentView, setCurrentView] = useState<"preview" | "code">("preview");
+  const [validationStatus, setValidationStatus] = useState<{ isValid: boolean; errors: any[] }>({ isValid: true, errors: [] });
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [fileContent, setFileContent] = useState<string>("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
@@ -282,6 +283,11 @@ export default function Editor() {
                 {isGenerating && (
                   <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
                 )}
+                {!validationStatus.isValid && (
+                  <Badge variant="destructive" className="text-xs">
+                    {validationStatus.errors.filter(e => e.severity === 'error').length} errors
+                  </Badge>
+                )}
               </div>
               <div className="flex gap-1 bg-gray-800 p-1 rounded-lg">
                 <Button
@@ -326,7 +332,10 @@ export default function Editor() {
                     </div>
                   }
                 >
-                  <LivePreview files={generatedFiles} />
+                  <LivePreview 
+                    files={generatedFiles} 
+                    onValidationChange={(isValid, errors) => setValidationStatus({ isValid, errors })}
+                  />
                 </ErrorBoundary>
               </div>
             ) : (
