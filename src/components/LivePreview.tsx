@@ -162,7 +162,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   }), []);
 
   return (
-    <div className="h-full w-full bg-background">
+    <div className="h-full w-full bg-black">
       <ErrorBoundary>
         <SandpackProvider
           template="react-ts"
@@ -178,17 +178,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             recompileDelay: 300
           }}
         >
-          <SandpackLayout style={{ height: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
+          <SandpackLayout style={{ height: "100vh", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
             {/* Preview only - full height */}
-            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
               <SandpackPreview 
                 style={{ 
-                  height: "100%", 
+                  height: "100vh", 
+                  width: "100%",
                   backgroundColor: "hsl(0 0% 0%)",
-                  border: "1px solid hsl(222 43% 15%)"
+                  border: "none"
                 }} 
                 showNavigator={false}
-                showRefreshButton={true}
+                showRefreshButton={false}
                 showOpenInCodeSandbox={false}
               />
             </div>
