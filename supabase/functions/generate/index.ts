@@ -169,17 +169,19 @@ import Settings from './components/Settings';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <main className="ml-64 p-8">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/deals" element={<Deals />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </main>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="flex">
+        <Navigation />
+        <main className="flex-1 ml-64 p-6">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/deals" element={<Deals />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }`
@@ -235,35 +237,56 @@ export default function Navigation() {
           {
             path: '/src/components/Dashboard.tsx',
             content: `import React from 'react';
-import { Users, Handshake, DollarSign, TrendingUp } from 'lucide-react';
+import { Users, Handshake, DollarSign, TrendingUp, BarChart3 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 export default function Dashboard() {
   const stats = [
-    { name: 'Total Customers', value: '2,651', icon: Users, change: '+12%' },
-    { name: 'Active Deals', value: '184', icon: Handshake, change: '+8%' },
-    { name: 'Revenue', value: '$892,450', icon: DollarSign, change: '+23%' },
-    { name: 'Growth Rate', value: '14.2%', icon: TrendingUp, change: '+2.1%' },
+    { name: 'Total Customers', value: '2,651', icon: Users, change: '+12%', color: 'bg-blue-500' },
+    { name: 'Active Deals', value: '184', icon: Handshake, change: '+8%', color: 'bg-green-500' },
+    { name: 'Revenue', value: '$892,450', icon: DollarSign, change: '+23%', color: 'bg-purple-500' },
+    { name: 'Growth Rate', value: '14.2%', icon: TrendingUp, change: '+2.1%', color: 'bg-orange-500' },
+  ];
+
+  const revenueData = [
+    { name: 'Jan', revenue: 65000, deals: 42 },
+    { name: 'Feb', revenue: 78000, deals: 38 },
+    { name: 'Mar', revenue: 82000, deals: 45 },
+    { name: 'Apr', revenue: 71000, deals: 41 },
+    { name: 'May', revenue: 89000, deals: 52 },
+    { name: 'Jun', revenue: 94000, deals: 48 },
+  ];
+
+  const activityData = [
+    { name: 'Mon', calls: 24, emails: 45, meetings: 8 },
+    { name: 'Tue', calls: 28, emails: 52, meetings: 12 },
+    { name: 'Wed', calls: 35, emails: 38, meetings: 15 },
+    { name: 'Thu', calls: 31, emails: 42, meetings: 10 },
+    { name: 'Fri', calls: 29, emails: 48, meetings: 14 },
+    { name: 'Sat', calls: 18, emails: 25, meetings: 6 },
+    { name: 'Sun', calls: 12, emails: 18, meetings: 3 },
   ];
 
   return (
-    <div>
-      <div className="mb-8">
+    <div className="space-y-8">
+      <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-2 text-gray-600">Welcome back! Here's what's happening with your business today.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.name} className="bg-white rounded-lg shadow p-6">
+            <div key={stat.name} className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Icon className="h-6 w-6 text-blue-600" />
+                <div className={\`p-3 rounded-full \${stat.color}\`}>
+                  <Icon className="h-6 w-6 text-white" />
                 </div>
               </div>
               <div className="mt-4">
@@ -275,49 +298,131 @@ export default function Dashboard() {
         })}
       </div>
 
+      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Revenue Trend</h3>
+            <BarChart3 className="h-5 w-5 text-gray-400" />
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={revenueData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
+              <YAxis stroke="#6b7280" fontSize={12} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fill="url(#revenueGradient)"
+              />
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Weekly Activity</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={activityData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
+              <YAxis stroke="#6b7280" fontSize={12} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+              <Line type="monotone" dataKey="calls" stroke="#3b82f6" strokeWidth={2} />
+              <Line type="monotone" dataKey="emails" stroke="#10b981" strokeWidth={2} />
+              <Line type="monotone" dataKey="meetings" stroke="#f59e0b" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Activity & Customers */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
           <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <p className="text-sm text-gray-600">New customer "Acme Corp" added</p>
-              <span className="text-xs text-gray-400">2 hours ago</span>
+            <div className="flex items-center space-x-3 p-3 rounded-lg bg-green-50 border border-green-100">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">New customer "Acme Corp" added</p>
+                <span className="text-xs text-gray-500">2 hours ago</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <p className="text-sm text-gray-600">Deal "Website Redesign" moved to proposal</p>
-              <span className="text-xs text-gray-400">4 hours ago</span>
+            <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">Deal "Website Redesign" moved to proposal</p>
+                <span className="text-xs text-gray-500">4 hours ago</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <p className="text-sm text-gray-600">Follow-up required for "Tech Solutions Ltd"</p>
-              <span className="text-xs text-gray-400">1 day ago</span>
+            <div className="flex items-center space-x-3 p-3 rounded-lg bg-yellow-50 border border-yellow-100">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">Follow-up required for "Tech Solutions Ltd"</p>
+                <span className="text-xs text-gray-500">1 day ago</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Customers</h3>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Customers</h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900">Acme Corporation</p>
-                <p className="text-sm text-gray-500">Enterprise Software</p>
+            <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Acme Corporation</p>
+                  <p className="text-sm text-gray-500">Enterprise Software</p>
+                </div>
               </div>
               <span className="text-lg font-semibold text-gray-900">$125,000</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900">Tech Solutions Ltd</p>
-                <p className="text-sm text-gray-500">IT Services</p>
+            <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Users className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Tech Solutions Ltd</p>
+                  <p className="text-sm text-gray-500">IT Services</p>
+                </div>
               </div>
               <span className="text-lg font-semibold text-gray-900">$89,500</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900">Digital Innovations</p>
-                <p className="text-sm text-gray-500">Marketing Agency</p>
+            <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Users className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Digital Innovations</p>
+                  <p className="text-sm text-gray-500">Marketing Agency</p>
+                </div>
               </div>
               <span className="text-lg font-semibold text-gray-900">$67,200</span>
             </div>
