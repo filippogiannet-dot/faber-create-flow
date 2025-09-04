@@ -76,6 +76,11 @@ const Editor = () => {
   const [sandpackFiles, setSandpackFiles] = useState<FileData[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Ripristina l'ultimo prompt usato dall'utente
+  useEffect(() => {
+    const stored = localStorage.getItem('last_prompt');
+    if (stored && !newPrompt) setNewPrompt(stored);
+  }, []);
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -286,6 +291,10 @@ const Editor = () => {
   };
   const handleGenerateApp = async () => {
     if (!newPrompt.trim() || !project || !user || isGenerating) return;
+
+    // Ricorda l'ultimo prompt dell'utente
+    localStorage.setItem('last_prompt', newPrompt.trim());
+
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       type: 'user',
@@ -295,52 +304,34 @@ const Editor = () => {
     setChatMessages(prev => [...prev, userMessage]);
     setIsGenerating(true);
     setNewPrompt("");
+
+    // Messaggi di progresso in tempo reale
+    const timeouts: number[] = [];
+    const addSystem = (text: string) => setChatMessages(prev => [...prev, {
+      id: `sys-${Date.now()}`,
+      type: 'system',
+      content: text,
+      timestamp: new Date()
+    }]);
+    timeouts.push(window.setTimeout(() => addSystem('Inizializzo boilerplate React + Tailwind…'), 100));
+    timeouts.push(window.setTimeout(() => addSystem('Aggiungo router e dipendenze UI (react-router-dom, Rewind-UI, Keep React)…'), 700));
+    timeouts.push(window.setTimeout(() => addSystem('Genero componenti base: layout, pulsanti, form, tabella, modale…'), 1400));
+    timeouts.push(window.setTimeout(() => addSystem('Aggiorno i file e preparo la Live Preview…'), 2100));
+
     try {
       // Update project status to generating
       await supabase.functions.invoke('update-project', {
         body: {
           projectId: project.id,
-          updates: {
-            generation_status: 'generating'
-          }
+          updates: { generation_status: 'generating' }
         }
       });
 
-      // Generate new code using the new generate function
-      const {
-        data: generateData,
-        error: generateError
-      } = await supabase.functions.invoke('generate', {
-        body: {
-          prompt: newPrompt.trim()
-        }
+      // Generate new code
+      const { data: generateData, error: generateError } = await supabase.functions.invoke('generate', {
+        body: { prompt: userMessage.content }
       });
       if (generateError) throw generateError;
-
-      // Add AI response to chat
-      const aiMessage: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: 'Codice generato con successo! Controlla la preview.',
-        timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, aiMessage]);
-
-      // Create prompt record
-      const {
-        error: promptError
-      } = await supabase.from('prompts').insert({
-        project_id: project.id,
-        user_id: user.id,
-        prompt_text: userMessage.content,
-        ai_response: {
-          content: 'Codice generato con successo!'
-        },
-        tokens_used: 100
-      });
-      if (promptError) {
-        console.error('Error saving prompt:', promptError);
-      }
 
       // Save generated files to database
       if (generateData.files && Array.isArray(generateData.files)) {
@@ -348,54 +339,59 @@ const Editor = () => {
           project_id: project.id,
           file_path: file.path.startsWith('/') ? file.path.slice(1) : file.path,
           file_content: file.content,
-          file_type: file.path.endsWith('.tsx') || file.path.endsWith('.ts') ? 'typescript' : file.path.endsWith('.jsx') || file.path.endsWith('.js') ? 'javascript' : file.path.endsWith('.html') ? 'html' : file.path.endsWith('.css') ? 'css' : 'text'
+          file_type:
+            file.path.endsWith('.tsx') || file.path.endsWith('.ts') ? 'typescript' :
+            file.path.endsWith('.jsx') || file.path.endsWith('.js') ? 'javascript' :
+            file.path.endsWith('.html') ? 'html' :
+            file.path.endsWith('.css') ? 'css' : 'text'
         }));
-        const {
-          error: filesError
-        } = await supabase.from('project_files').upsert(fileInserts, {
-          onConflict: 'project_id,file_path'
-        });
-        if (filesError) {
-          console.error('Error saving files:', filesError);
-        }
+        const { error: filesError } = await supabase.from('project_files').upsert(fileInserts, { onConflict: 'project_id,file_path' });
+        if (filesError) console.error('Error saving files:', filesError);
       }
 
-      // Update project status to completed
+      // Add AI result to chat
+      setChatMessages(prev => [...prev, {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: 'Codice generato! Aggiorno la preview…',
+        timestamp: new Date()
+      }]);
+
+      // Save prompt record
+      const { error: promptError } = await supabase.from('prompts').insert({
+        project_id: project.id,
+        user_id: user.id,
+        prompt_text: userMessage.content,
+        ai_response: { content: 'Codice generato con successo!' },
+        tokens_used: 100
+      });
+      if (promptError) console.error('Error saving prompt:', promptError);
+
+      // Complete status
       await supabase.functions.invoke('update-project', {
         body: {
           projectId: project.id,
-          updates: {
-            generation_status: 'completed',
-            error_message: null
-          }
+          updates: { generation_status: 'completed', error_message: null }
         }
       });
     } catch (error) {
       console.error('Generation error:', error);
-      const errorMessage: ChatMessage = {
+      setChatMessages(prev => [...prev, {
         id: `error-${Date.now()}`,
         type: 'ai',
         content: 'Si è verificato un errore durante la generazione del codice. Riprova.',
         timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, errorMessage]);
-
-      // Update project status to failed
+      }]);
       await supabase.functions.invoke('update-project', {
         body: {
           projectId: project.id,
-          updates: {
-            generation_status: 'failed',
-            error_message: error instanceof Error ? error.message : 'Errore sconosciuto'
-          }
+          updates: { generation_status: 'failed', error_message: error instanceof Error ? error.message : 'Errore sconosciuto' }
         }
       });
-      toast({
-        variant: "destructive",
-        title: "Errore di generazione",
-        description: "Si è verificato un errore. Riprova."
-      });
+      toast({ variant: 'destructive', title: 'Errore di generazione', description: 'Si è verificato un errore. Riprova.' });
     } finally {
+      // Clear scheduled progress updates
+      timeouts.forEach(t => clearTimeout(t));
       setIsGenerating(false);
     }
   };
@@ -487,9 +483,9 @@ const Editor = () => {
       {/* Main Layout - Two Columns */}
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Panel - Chat */}
-        <div className="w-2/5 border-r bg-card flex flex-col">
+        <div className="w-1/3 border-r bg-card flex flex-col">
           {/* Chat Messages */}
-          <ScrollArea className="flex-1 p-4 bg-black">
+          <ScrollArea className="flex-1 p-4 bg-background">
             {chatMessages.length === 0 ? <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                   <Bot className="h-8 w-8 text-primary" />
@@ -574,7 +570,7 @@ const Editor = () => {
 
             <TabsContent value="preview" className="flex-1 m-0 p-4">
               <div className="h-full flex items-center justify-center bg-muted/20 rounded-lg">
-                <div className={cn("bg-white rounded-lg shadow-lg overflow-hidden", deviceSize === 'mobile' && "w-[375px] h-[667px]", deviceSize === 'tablet' && "w-[768px] h-[1024px]", deviceSize === 'desktop' && "w-full h-full")}>
+                <div className={cn("bg-card rounded-lg shadow-faber-card overflow-hidden border border-border", deviceSize === 'mobile' && "w-[375px] h-[667px]", deviceSize === 'tablet' && "w-[768px] h-[1024px]", deviceSize === 'desktop' && "w-full h-full")}>
                   <LivePreview key={previewKey} files={sandpackFiles} />
                 </div>
               </div>
