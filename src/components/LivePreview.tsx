@@ -99,13 +99,26 @@ export class ErrorBoundary extends Component<Props, State> {
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
-import App from '${appImportPath}'
+import * as AppModule from '${appImportPath}'
 
-// Prevent Router context conflicts by creating isolated routing context
+const ResolvedApp = (AppModule as any)?.default ?? (AppModule as any)?.App;
+
 function IsolatedApp() {
+  if (!ResolvedApp) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'black', color: 'white' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <h2 style={{ fontSize: 18, marginBottom: 8 }}>App component not found</h2>
+          <p>Ensure you export a default component or a named export "App".</p>
+        </div>
+      </div>
+    );
+  }
+  const Comp = ResolvedApp as React.ComponentType;
   return (
     <BrowserRouter>
-      <App />
+      <Comp />
     </BrowserRouter>
   );
 }
