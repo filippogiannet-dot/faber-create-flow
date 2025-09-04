@@ -8,9 +8,9 @@ interface CodeEditorProps {
 
 export default function CodeEditor({ code, onChange, language = "javascript" }: CodeEditorProps) {
   return (
-    <div className="h-full w-full bg-black overflow-hidden">
+    <div className="w-full bg-black overflow-hidden" style={{ height: "100vh" }}>
       <Editor
-        height="100%"
+        height="100vh"
         defaultLanguage={language}
         theme="vs-dark"
         value={code}

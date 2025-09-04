@@ -21,6 +21,9 @@ export default function Editor() {
   const { projectId } = useParams();
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [hasGeneratedOnce, setHasGeneratedOnce] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState<Array<{ path: string; content: string }>>([]);
   const [currentView, setCurrentView] = useState<"preview" | "code">("preview");
   const [selectedFile, setSelectedFile] = useState<string>("");
@@ -44,14 +47,15 @@ export default function Editor() {
   }, [chatMessages, projectId]);
 
   const addChatMessage = (text: string, type: 'user' | 'assistant' | 'status' = 'status') => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const message: ChatMessage = {
-      id: Date.now().toString(),
+      id,
       text,
       type,
       timestamp: new Date()
     };
     setChatMessages(prev => [...prev, message]);
-    return message.id;
+    return id;
   };
 
   const updateChatMessage = (id: string, text: string) => {
@@ -63,11 +67,15 @@ export default function Editor() {
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
+    const isInitialRun = !hasGeneratedOnce && generatedFiles.length === 0;
+
+    setLoading(true);
+    setCompleted(false);
     setIsGenerating(true);
     
     // Add user message to chat
     addChatMessage(prompt, 'user');
-    const userPrompt = prompt;
+    const rawPrompt = prompt;
     
     // Clear the prompt input
     setPrompt("");
@@ -75,38 +83,52 @@ export default function Editor() {
     try {
       const initId = addChatMessage("🔄 Inizializzo la generazione...", 'status');
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       updateChatMessage(initId, "✅ Inizializzazione completata");
       
-      const parseId = addChatMessage("🔍 Analizzo il prompt...", 'status');
+      const parseId = addChatMessage(isInitialRun ? "🔍 Analizzo il prompt per generare l'app..." : "🔧 Analizzo le modifiche richieste...", 'status');
+      
+      const preparedPrompt = isInitialRun
+        ? `Genera un’app completa con queste caratteristiche:\n\n${rawPrompt}`
+        : `Applica le seguenti modifiche al codice esistente senza rigenerare l’app da zero. Mantieni la struttura e aggiorna solo i file necessari.\n\nModifiche:\n${rawPrompt}`;
       
       const { data, error } = await supabase.functions.invoke("generate", {
-        body: { prompt: userPrompt },
+        body: { prompt: preparedPrompt },
       });
 
       if (error) throw error;
 
-      updateChatMessage(parseId, "✅ Prompt analizzato");
-      const genId = addChatMessage("⚡ Genero i componenti...", 'status');
+      updateChatMessage(parseId, "✅ Analisi completata");
+      const genId = addChatMessage(isInitialRun ? "⚡ Genero i componenti..." : "✏️ Applico le modifiche ai file...", 'status');
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       if (data?.files && Array.isArray(data.files)) {
-        updateChatMessage(genId, "✅ Componenti generati");
+        updateChatMessage(genId, isInitialRun ? "✅ Componenti generati" : "✅ Modifiche applicate");
         const previewId = addChatMessage("🎨 Aggiorno la preview...", 'status');
         
         setGeneratedFiles(data.files);
         setCurrentView("preview");
         
-        await new Promise(resolve => setTimeout(resolve, 300));
-        updateChatMessage(previewId, "🚀 Preview aggiornata con successo!");
+        await new Promise(resolve => setTimeout(resolve, 200));
+        updateChatMessage(previewId, isInitialRun ? "🚀 Preview aggiornata con successo!" : "🔄 Preview aggiornata.");
         
-        addChatMessage("App generata con successo! Ora puoi visualizzarla nella preview.", 'assistant');
-        
-        toast({
-          title: "App generata!",
-          description: "L'applicazione è stata generata con successo.",
-        });
+        if (isInitialRun) {
+          addChatMessage("App generata con successo! Ora puoi visualizzarla nella preview.", 'assistant');
+          setHasGeneratedOnce(true);
+          toast({
+            title: "App generata!",
+            description: "L'applicazione è stata generata con successo.",
+          });
+        } else {
+          addChatMessage("Modifica applicata, preview aggiornata.", 'assistant');
+          toast({
+            title: "Modifica applicata",
+            description: "La preview è stata aggiornata.",
+          });
+        }
+
+        setCompleted(true);
       } else {
         throw new Error("Formato risposta non valido");
       }
@@ -119,6 +141,7 @@ export default function Editor() {
         description: "Si è verificato un errore durante la generazione dell'app.",
       });
     } finally {
+      setLoading(false);
       setIsGenerating(false);
     }
   };

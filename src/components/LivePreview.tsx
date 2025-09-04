@@ -134,16 +134,21 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     // Always inject ErrorBoundary
     mapped['/src/ErrorBoundary.tsx'] = { code: errorBoundaryCode };
 
-    // Detect App path and ensure main.tsx wraps with BrowserRouter
-    const hasSrcApp = Boolean(mapped['/src/App.tsx']);
-    const hasRootApp = Boolean(mapped['/App.tsx']);
+    // Detect App path case-insensitively and ensure main.tsx wraps with BrowserRouter
+    const appKey = Object.keys(mapped).find(
+      (k) => k.toLowerCase() === '/src/app.tsx' || k.toLowerCase() === '/app.tsx'
+    );
 
     // If no App provided at all, add a safe default
-    if (!hasSrcApp && !hasRootApp) {
+    if (!appKey) {
       mapped['/src/App.tsx'] = { code: defaultAppTsx };
     }
 
-    const appImport = hasSrcApp || mapped['/src/App.tsx'] ? './App' : hasRootApp ? '../App' : './App';
+    const chosenKey = appKey ?? '/src/App.tsx';
+    const appImport = chosenKey.startsWith('/src/')
+      ? './' + chosenKey.slice('/src/'.length).replace(/\.(t|j)sx?$/, '')
+      : '../' + chosenKey.slice(1).replace(/\.(t|j)sx?$/, '');
+
     // Always enforce a Router-wrapped entry for the sandbox to prevent useRoutes errors
     mapped['/src/main.tsx'] = { code: ensureMain(appImport) };
 
