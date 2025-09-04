@@ -27,37 +27,24 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert React developer. Generate clean, functional React components based on the user's prompt.
-
-IMPORTANT: Always return a valid JSON response in this exact format:
+    const systemPrompt = `You are an expert React + TypeScript generator. Output ONLY strict JSON (no prose, no code fences), in this exact shape:
 {
   "files": [
-    {
-      "path": "/App.tsx",
-      "content": "// React component code here"
-    }
+    { "path": "/index.html", "content": "..." },
+    { "path": "/src/main.tsx", "content": "..." },
+    { "path": "/src/App.tsx", "content": "..." }
   ]
 }
 
-Rules:
-- Use TypeScript and modern React (function components with hooks)
-- Use Tailwind CSS utility classes for styling
-- Prefer UI components from @rewind-ui/core. If something is missing, you may use keep-react as a fallback
-- When using UI libraries, actually render basic components (Button, Input, Card, Table, Modal) so the preview is complete
-- Include react-router-dom when you add routes and show a simple Router setup (BrowserRouter + Routes) in /App.tsx
-- Always include at least: /index.html (with <script src=\"https://cdn.tailwindcss.com\"></script>), /main.tsx, and /App.tsx so the app runs in the sandbox
-- Make components responsive and accessible
-- Include proper TypeScript types
-- Keep components clean and well-structured
-- For complex apps, split into multiple files (e.g., /src/CustomerList.tsx, /src/AddCustomerForm.tsx)
-- Include boilerplate files when needed
-
-Example imports for UI components:
-import { Button, Input, Modal, Table, Card, Badge } from '@rewind-ui/core';
-// or
-import { Button, Input, Modal, Table, Card, Badge } from 'keep-react';
-
-Generate practical, working code that demonstrates the requested functionality with complete UI components and routes when appropriate.`;
+Strong rules:
+- Use React 18 function components with hooks
+- Use Tailwind CSS utility classes; include <script src=\"https://cdn.tailwindcss.com\"></script> in /index.html
+- Prefer UI components from @rewind-ui/core; fallback to keep-react only if necessary
+- Use react-router-dom v6 when routing is required (BrowserRouter + Routes)
+- Place runtime code under /src (App.tsx, main.tsx, components)
+- Ensure imports are valid and render actual components (no placeholders)
+- Keep code compilable (TS strict) and responsive
+- Do not include explanations or backticks, return JSON only`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -71,8 +58,8 @@ Generate practical, working code that demonstrates the requested functionality w
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: 0.4,
+        max_tokens: 2200,
       }),
     });
 
@@ -81,32 +68,101 @@ Generate practical, working code that demonstrates the requested functionality w
     }
 
     const data = await response.json();
-    const generatedContent = data.choices[0].message.content;
+    const raw = data.choices?.[0]?.message?.content ?? '';
 
-    // Try to parse the JSON response
-    let parsedResponse;
-    try {
-      parsedResponse = JSON.parse(generatedContent);
-    } catch (parseError) {
-      // If parsing fails, wrap the content as a single file
+    // Robust JSON extraction (handles fenced blocks and extra prose)
+    function tryParseJson(input: string): any | null {
+      const candidates: string[] = [];
+      const fenceRegex = /```(?:json)?\n([\s\S]*?)```/gi;
+      let m: RegExpExecArray | null;
+      while ((m = fenceRegex.exec(input)) !== null) {
+        candidates.push(m[1]);
+      }
+      // If no fenced code, add whole content
+      if (candidates.length === 0) candidates.push(input);
+
+      // Also try to extract an object that contains a "files" array
+      const objectWithFiles = input.match(/\{[\s\S]*?"files"[\s\S]*?\}/);
+      if (objectWithFiles) candidates.unshift(objectWithFiles[0]);
+
+      for (const c of candidates) {
+        try {
+          const parsed = JSON.parse(c);
+          if (parsed && Array.isArray(parsed.files)) return parsed;
+        } catch (_) { /* continue */ }
+      }
+      return null;
+    }
+
+    let parsedResponse = tryParseJson(raw);
+
+    // Build a safe default app if parsing failed
+    if (!parsedResponse) {
       parsedResponse = {
         files: [
           {
-            path: "/App.tsx",
-            content: generatedContent
+            path: '/index.html',
+            content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n  <title>App</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>`
+          },
+          {
+            path: '/src/App.tsx',
+            content: `import React from 'react';\nexport default function App() {\n  return (\n    <div className=\"min-h-screen grid place-items-center bg-black text-white\">\n      <div className=\"text-center space-y-4 p-8\">\n        <h1 className=\"text-2xl font-semibold\">Generation parsing failed</h1>\n        <p className=\"text-gray-400\">Ho caricato un'app di fallback per mantenere la preview attiva.</p>\n      </div>\n    </div>\n  );\n}`
+          },
+          {
+            path: '/src/main.tsx',
+            content: `import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>\n);`
           }
         ]
       };
     }
 
+    // Normalize file paths and ensure required files
+    const files = (parsedResponse.files as Array<{ path: string; content: string }> )
+      .filter(f => f && typeof f.path === 'string' && typeof f.content === 'string')
+      .map(f => {
+        let path = f.path.startsWith('/') ? f.path : '/' + f.path;
+        // Move runtime files under /src
+        if (path.toLowerCase() === '/app.tsx') path = '/src/App.tsx';
+        if (path.toLowerCase() === '/main.tsx') path = '/src/main.tsx';
+        return { path, content: f.content };
+      });
+
+    const hasIndex = files.some(f => f.path === '/index.html');
+    const hasApp = files.some(f => f.path.toLowerCase() === '/src/app.tsx');
+    const hasMain = files.some(f => f.path.toLowerCase() === '/src/main.tsx');
+
+    if (!hasIndex) {
+      files.unshift({
+        path: '/index.html',
+        content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n  <title>App</title>\n  <script src=\"https://cdn.tailwindcss.com\"></script>\n</head>\n<body>\n  <div id=\"root\"></div>\n</body>\n</html>`
+      });
+    }
+
+    if (!hasApp) {
+      files.push({
+        path: '/src/App.tsx',
+        content: `import React from 'react';\nexport default function App() {\n  return (\n    <div className=\"min-h-screen grid place-items-center bg-black text-white\">\n      <h1 className=\"text-2xl\">Hello from fallback App</h1>\n    </div>\n  );\n}`
+      });
+    }
+
+    if (!hasMain) {
+      files.push({
+        path: '/src/main.tsx',
+        content: `import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>\n);`
+      });
+    }
+
+    const normalized = { files };
+
     console.log('Generated code successfully:', { 
       promptLength: prompt.length,
-      filesCount: parsedResponse.files?.length || 0
+      filesCount: normalized.files.length
     });
 
-    return new Response(JSON.stringify(parsedResponse), {
+    return new Response(JSON.stringify(normalized), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
 
   } catch (error) {
     console.error('Error in generate function:', error);
