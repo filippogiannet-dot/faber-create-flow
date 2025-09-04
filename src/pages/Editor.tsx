@@ -94,12 +94,10 @@ const Editor = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
-  const [optimisticHtml, setOptimisticHtml] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<ProjectFile | null>(null);
   const [sandpackFiles, setSandpackFiles] = useState<FileData[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -141,273 +139,6 @@ const Editor = () => {
       console.error('Error fetching project files:', error);
     }
   }, [projectId, currentFile]);
-
-  // Generate preview HTML from project files
-  const generatePreviewHtml = useCallback((files: ProjectFile[]): string => {
-    if (!files || files.length === 0) {
-      // Check if project is still generating
-      if (project?.generation_status === 'generating') {
-        return `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Generazione in corso...</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-              @keyframes sparkle {
-                0%, 100% { opacity: 0.3; transform: scale(0.8); }
-                50% { opacity: 1; transform: scale(1.2); }
-              }
-              @keyframes float {
-                0%, 100% { transform: translateY(0px); }
-                50% { transform: translateY(-20px); }
-              }
-              .sparkle { animation: sparkle 2s ease-in-out infinite; }
-              .float { animation: float 3s ease-in-out infinite; }
-              .gradient-bg {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              }
-            </style>
-          </head>
-          <body class="gradient-bg min-h-screen flex items-center justify-center">
-            <div class="text-center text-white p-8">
-              <div class="float mb-8">
-                <div class="w-24 h-24 mx-auto mb-6 relative">
-                  <div class="absolute inset-0 bg-white/20 rounded-full"></div>
-                  <div class="absolute inset-2 bg-white/30 rounded-full sparkle"></div>
-                  <div class="absolute inset-4 bg-white/40 rounded-full"></div>
-                  <div class="absolute inset-6 bg-white/60 rounded-full sparkle" style="animation-delay: 0.5s;"></div>
-                  <div class="absolute inset-8 bg-white/80 rounded-full" style="animation-delay: 1s;"></div>
-                </div>
-              </div>
-              <h1 class="text-4xl font-bold mb-4">✨ Stiamo creando qualcosa di magico ✨</h1>
-              <p class="text-xl text-white/90 mb-6">La tua applicazione sta prendendo vita...</p>
-              <div class="flex justify-center items-center space-x-2">
-                <div class="w-3 h-3 bg-white rounded-full sparkle"></div>
-                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.3s;"></div>
-                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.6s;"></div>
-              </div>
-              <p class="text-sm text-white/70 mt-4">Questo potrebbe richiedere qualche momento...</p>
-            </div>
-          </body>
-          </html>
-        `;
-      }
-
-      // Check if generation failed
-      if (project?.generation_status === 'failed') {
-        return `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Errore di generazione</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-          </head>
-          <body class="bg-red-50 min-h-screen flex items-center justify-center">
-            <div class="text-center p-8">
-              <div class="w-16 h-16 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
-                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 19c-.77.833.192 2.5 1.732 2.5z"></path>
-                </svg>
-              </div>
-              <h1 class="text-2xl font-bold text-red-800 mb-4">Errore durante la generazione</h1>
-              <p class="text-red-600 mb-6">${project?.error_message || 'Si è verificato un errore imprevisto'}</p>
-              <button onclick="window.location.reload()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
-                Riprova
-              </button>
-            </div>
-          </body>
-          </html>
-        `;
-      }
-
-      return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Preview</title>
-          <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-          <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-          <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-          <script src="https://cdn.tailwindcss.com"></script>
-        </head>
-        <body>
-          <div id="root">
-            <div class="flex items-center justify-center h-screen bg-gray-100">
-              <div class="text-center">
-                <h1 class="text-2xl font-bold text-gray-800 mb-4">Nessuna preview disponibile</h1>
-                <p class="text-gray-600">Prova a generare del codice per vedere l'anteprima</p>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-    }
-
-    // Get the HTML file for the base structure
-    const htmlFile = files.find(f => f.file_path === 'public/index.html');
-    const appFile = files.find(f => 
-      f.file_path.includes('App.') && 
-      (f.file_path.endsWith('.tsx') || f.file_path.endsWith('.jsx'))
-    );
-    
-    if (htmlFile && appFile) {
-      // Use the generated HTML and inject the app component
-      let html = htmlFile.file_content;
-      
-      // If HTML doesn't have React setup, add it
-      if (!html.includes('react')) {
-        const headCloseIndex = html.indexOf('</head>');
-        if (headCloseIndex !== -1) {
-          const reactScripts = `
-            <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-            <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-            <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-            <script src="https://cdn.tailwindcss.com"></script>
-          `;
-          html = html.slice(0, headCloseIndex) + reactScripts + html.slice(headCloseIndex);
-        }
-      }
-
-      // Add the app component script
-      const bodyCloseIndex = html.lastIndexOf('</body>');
-      if (bodyCloseIndex !== -1) {
-        const appScript = `
-          <script type="text/babel">
-            const { useState, useEffect, useCallback } = React;
-            
-            ${appFile.file_content}
-            
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<App />);
-          </script>
-        `;
-        html = html.slice(0, bodyCloseIndex) + appScript + html.slice(bodyCloseIndex);
-      }
-      
-      return html;
-    }
-
-    // Fallback: create HTML from app component only
-    const componentFile = appFile || files.find(f => 
-      f.file_type === 'typescript' || f.file_type === 'javascript'
-    );
-
-    if (!componentFile) {
-      // Check if project is still generating
-      if (project?.generation_status === 'generating') {
-        return `
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Generazione in corso...</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-              @keyframes sparkle {
-                0%, 100% { opacity: 0.3; transform: scale(0.8); }
-                50% { opacity: 1; transform: scale(1.2); }
-              }
-              @keyframes float {
-                0%, 100% { transform: translateY(0px); }
-                50% { transform: translateY(-20px); }
-              }
-              .sparkle { animation: sparkle 2s ease-in-out infinite; }
-              .float { animation: float 3s ease-in-out infinite; }
-              .gradient-bg {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              }
-            </style>
-          </head>
-          <body class="gradient-bg min-h-screen flex items-center justify-center">
-            <div class="text-center text-white p-8">
-              <div class="float mb-8">
-                <div class="w-24 h-24 mx-auto mb-6 relative">
-                  <div class="absolute inset-0 bg-white/20 rounded-full"></div>
-                  <div class="absolute inset-2 bg-white/30 rounded-full sparkle"></div>
-                  <div class="absolute inset-4 bg-white/40 rounded-full"></div>
-                  <div class="absolute inset-6 bg-white/60 rounded-full sparkle" style="animation-delay: 0.5s;"></div>
-                  <div class="absolute inset-8 bg-white/80 rounded-full" style="animation-delay: 1s;"></div>
-                </div>
-              </div>
-              <h1 class="text-4xl font-bold mb-4">✨ Stiamo creando qualcosa di magico ✨</h1>
-              <p class="text-xl text-white/90 mb-6">La tua applicazione sta prendendo vita...</p>
-              <div class="flex justify-center items-center space-x-2">
-                <div class="w-3 h-3 bg-white rounded-full sparkle"></div>
-                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.3s;"></div>
-                <div class="w-3 h-3 bg-white rounded-full sparkle" style="animation-delay: 0.6s;"></div>
-              </div>
-              <p class="text-sm text-white/70 mt-4">Questo potrebbe richiedere qualche momento...</p>
-            </div>
-          </body>
-          </html>
-        `;
-      }
-
-      return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Preview</title>
-          <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-          <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-          <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-          <script src="https://cdn.tailwindcss.com"></script>
-        </head>
-        <body>
-          <div id="root">
-            <div class="flex items-center justify-center h-screen bg-gray-100">
-              <div class="text-center">
-                <h1 class="text-2xl font-bold text-gray-800 mb-4">Generazione in Corso</h1>
-                <p class="text-gray-600">Attendere mentre l'applicazione viene generata...</p>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-    }
-
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Preview</title>
-        <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: system-ui, -apple-system, sans-serif; }
-        </style>
-      </head>
-      <body>
-        <div id="root"></div>
-        <script type="text/babel">
-          const { useState, useEffect, useCallback } = React;
-          
-          ${componentFile.file_content}
-          
-          const root = ReactDOM.createRoot(document.getElementById('root'));
-          root.render(<App />);
-        </script>
-      </body>
-      </html>
-    `;
-  }, []);
 
   // Fetch project data and setup realtime subscriptions
   useEffect(() => {
@@ -459,15 +190,11 @@ const Editor = () => {
 
             if (prompt.ai_response) {
               const aiResponse = prompt.ai_response as any;
-              const explanation = (typeof aiResponse === 'object' && aiResponse?.explanation) 
-                ? aiResponse.explanation 
-                : 'Aggiornamento del codice generato.';
-              
               messages.push({
                 id: `ai-${prompt.id}`,
                 type: 'ai',
-                content: explanation,
-                timestamp: new Date(prompt.created_at)
+                content: typeof aiResponse === 'string' ? aiResponse : (aiResponse.content || 'Risposta AI non disponibile'),
+                timestamp: new Date(prompt.created_at),
               });
             }
           });
@@ -477,21 +204,8 @@ const Editor = () => {
         // Fetch project files
         await fetchProjectFiles();
 
-        // Load latest snapshot compiled HTML, if available
-        const { data: latestSnap, error: snapError } = await supabase
-          .from('snapshots')
-          .select('state')
-          .eq('project_id', projectId)
-          .order('version', { ascending: false })
-          .limit(1)
-          .single();
-        if (!snapError && latestSnap?.state && typeof latestSnap.state === 'object' && 'html' in latestSnap.state) {
-          setOptimisticHtml(latestSnap.state.html as string);
-          setPreviewKey(prev => prev + 1);
-        }
-        
       } catch (error) {
-        console.error('Error fetching project data:', error);
+        console.error('Error in fetchProjectData:', error);
         toast({
           variant: "destructive",
           title: "Errore",
@@ -502,164 +216,66 @@ const Editor = () => {
 
     fetchProjectData();
 
-    // Set up realtime subscription for project files and status
+    // Set up real-time subscriptions for project updates
+    const projectSubscription = supabase
+      .channel(`project-${projectId}`)
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'projects', filter: `id=eq.${projectId}` },
+        (payload) => {
+          setProject(payload.new as Project);
+          const newProject = payload.new as any;
+          if (newProject?.generation_status !== 'generating') {
+            fetchProjectFiles();
+            setPreviewKey(prev => prev + 1);
+          }
+        }
+      )
+      .subscribe();
+
     const filesSubscription = supabase
-      .channel('project_files')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'project_files',
-        filter: `project_id=eq.${projectId}`
-      }, () => {
-        fetchProjectFiles();
-        setPreviewKey(prev => prev + 1);
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'projects',
-        filter: `id=eq.${projectId}`
-      }, (payload) => {
-        // Update project data when generation status changes
-        const updatedProject = payload.new as Project;
-        setProject(updatedProject);
-        setPreviewKey(prev => prev + 1);
-      })
+      .channel(`project-files-${projectId}`)
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'project_files', filter: `project_id=eq.${projectId}` },
+        () => {
+          fetchProjectFiles();
+          setPreviewKey(prev => prev + 1);
+        }
+      )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(filesSubscription);
+      projectSubscription.unsubscribe();
+      filesSubscription.unsubscribe();
     };
   }, [projectId, user, navigate, toast, fetchProjectFiles]);
 
-  // Auto-scroll chat to bottom
+  // Auto-scroll to bottom of chat
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
-  // Handle file selection
-  const handleFileSelect = (file: ProjectFile) => {
-    setCurrentFile(file);
-  };
-
-  // Handle code changes in Monaco Editor
-  const handleCodeChange = (newCode: string) => {
-    if (!currentFile) return;
-    
-    // Update the current file content
-    const updatedFile = { ...currentFile, file_content: newCode };
-    setCurrentFile(updatedFile);
-    
-    // Update in project files
-    const updatedFiles = projectFiles.map(f => 
-      f.id === currentFile.id ? updatedFile : f
-    );
-    setProjectFiles(updatedFiles);
-    
-    // Update Sandpack files
-    const updatedSandpackFiles = sandpackFiles.map(f => 
-      f.path === (currentFile.file_path.startsWith('/') ? currentFile.file_path : `/${currentFile.file_path}`) 
-        ? { ...f, content: newCode } 
-        : f
-    );
-    setSandpackFiles(updatedSandpackFiles);
-  };
-
-  const handleSendPrompt = async () => {
-    if (!newPrompt.trim() || isGenerating || !projectId) return;
-
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      type: 'user',
-      content: newPrompt,
-      timestamp: new Date()
-    };
-
-    setChatMessages(prev => [...prev, userMessage]);
-    setIsGenerating(true);
-    const promptText = newPrompt;
-    setNewPrompt("");
-
-    try {
-      const { data: result, error } = await supabase.functions.invoke('ai-generate', {
-        body: {
-          projectId,
-          prompt: promptText,
-          isInitial: false
-        }
-      });
-
-      if (error) throw error;
-
-      if (result.success) {
-        const aiResponse = result.response as any;
-        const explanation = (typeof aiResponse === 'object' && aiResponse?.explanation) 
-          ? aiResponse.explanation 
-          : 'Codice generato con successo!';
-          
-        const aiMessage: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          type: 'ai',
-          content: explanation,
-          timestamp: new Date(),
-          tokens_used: result.tokensUsed || 0
-        };
-        setChatMessages(prev => [...prev, aiMessage]);
-
-        toast({
-          title: "Codice aggiornato",
-          description: "L'applicazione è stata modificata con successo",
-        });
-
-        // Optimistic preview update with compiled html (if provided)
-        if (result.html) {
-          setOptimisticHtml(result.html);
-          setPreviewKey(prev => prev + 1);
-        }
-
-        // Refresh files after generation
-        await fetchProjectFiles();
-      } else {
-        throw new Error(result.error || 'Generazione fallita');
-      }
-    } catch (error) {
-      console.error('Error sending prompt:', error);
-      const errorMessage: ChatMessage = {
-        id: `error-${Date.now()}`,
-        type: 'system',
-        content: `Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`,
-        timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, errorMessage]);
-      
-      toast({
-        variant: "destructive",
-        title: "Errore",
-        description: "Errore durante la generazione",
-      });
-    } finally {
-      setIsGenerating(false);
+  const handleSaveName = async () => {
+    if (!project || !projectName.trim()) {
+      setIsEditingName(false);
+      return;
     }
-  };
-
-  const handleProjectNameSave = async () => {
-    if (!project || !projectName.trim()) return;
 
     try {
       const { error } = await supabase.functions.invoke('update-project', {
         body: {
           projectId: project.id,
-          updates: { name: projectName },
-        },
+          updates: { name: projectName.trim() }
+        }
       });
 
       if (error) throw error;
 
-      setProject({ ...project, name: projectName });
+      setProject(prev => prev ? { ...prev, name: projectName.trim() } : null);
       setIsEditingName(false);
+      
       toast({
-        title: "Nome aggiornato",
-        description: "Il nome del progetto è stato modificato",
+        title: "Nome del progetto aggiornato",
+        description: "Il nome è stato salvato con successo",
       });
     } catch (error) {
       console.error('Error updating project name:', error);
@@ -668,373 +284,492 @@ const Editor = () => {
         title: "Errore",
         description: "Impossibile aggiornare il nome del progetto",
       });
+      setProjectName(project.name);
+      setIsEditingName(false);
     }
   };
 
-  const refreshPreview = () => {
-    setPreviewKey(prev => prev + 1);
+  const downloadProject = async () => {
+    if (!project || !projectFiles.length) return;
+
+    try {
+      const zip = new JSZip();
+      
+      projectFiles.forEach(file => {
+        zip.file(file.file_path, file.file_content);
+      });
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = window.URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download completato",
+        description: "Il progetto è stato scaricato con successo",
+      });
+    } catch (error) {
+      console.error('Error downloading project:', error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile scaricare il progetto",
+      });
+    }
   };
 
-  const openInNewTab = () => {
-    if (projectFiles.length > 0) {
-      const htmlContent = generatePreviewHtml(projectFiles);
-      if (htmlContent) {
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
+  const handleGenerateApp = async () => {
+    if (!newPrompt.trim() || !project || !user || isGenerating) return;
+
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content: newPrompt.trim(),
+      timestamp: new Date(),
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setIsGenerating(true);
+    setNewPrompt("");
+
+    try {
+      // Update project status to generating
+      await supabase.functions.invoke('update-project', {
+        body: {
+          projectId: project.id,
+          updates: { generation_status: 'generating' }
+        }
+      });
+
+      // Generate new code using the new generate function
+      const { data: generateData, error: generateError } = await supabase.functions.invoke('generate', {
+        body: { prompt: newPrompt.trim() }
+      });
+
+      if (generateError) throw generateError;
+
+      // Add AI response to chat
+      const aiMessage: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: 'Codice generato con successo! Controlla la preview.',
+        timestamp: new Date(),
+      };
+      setChatMessages(prev => [...prev, aiMessage]);
+
+      // Create prompt record
+      const { error: promptError } = await supabase
+        .from('prompts')
+        .insert({
+          project_id: project.id,
+          user_id: user.id,
+          prompt_text: userMessage.content,
+          ai_response: { content: 'Codice generato con successo!' },
+          tokens_used: 100,
+        });
+
+      if (promptError) {
+        console.error('Error saving prompt:', promptError);
       }
+
+      // Save generated files to database
+      if (generateData.files && Array.isArray(generateData.files)) {
+        const fileInserts = generateData.files.map((file: any) => ({
+          project_id: project.id,
+          file_path: file.path.startsWith('/') ? file.path.slice(1) : file.path,
+          file_content: file.content,
+          file_type: file.path.endsWith('.tsx') || file.path.endsWith('.ts') ? 'typescript' : 
+                     file.path.endsWith('.jsx') || file.path.endsWith('.js') ? 'javascript' :
+                     file.path.endsWith('.html') ? 'html' :
+                     file.path.endsWith('.css') ? 'css' : 'text'
+        }));
+
+        const { error: filesError } = await supabase
+          .from('project_files')
+          .upsert(fileInserts, { onConflict: 'project_id,file_path' });
+
+        if (filesError) {
+          console.error('Error saving files:', filesError);
+        }
+      }
+
+      // Update project status to completed
+      await supabase.functions.invoke('update-project', {
+        body: {
+          projectId: project.id,
+          updates: { 
+            generation_status: 'completed',
+            error_message: null
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Generation error:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        type: 'ai',
+        content: 'Si è verificato un errore durante la generazione del codice. Riprova.',
+        timestamp: new Date(),
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+
+      // Update project status to failed
+      await supabase.functions.invoke('update-project', {
+        body: {
+          projectId: project.id,
+          updates: { 
+            generation_status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Errore sconosciuto'
+          }
+        }
+      });
+
+      toast({
+        variant: "destructive",
+        title: "Errore di generazione",
+        description: "Si è verificato un errore. Riprova.",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const getDeviceWidth = () => {
-    switch (deviceSize) {
-      case 'mobile': return '375px';
-      case 'tablet': return '768px';
-      case 'desktop': return '100%';
-      default: return '100%';
+  const getLanguageFromPath = (path: string): string => {
+    const ext = path.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'ts':
+      case 'tsx':
+        return 'typescript';
+      case 'js':
+      case 'jsx':
+        return 'javascript';
+      case 'html':
+        return 'html';
+      case 'css':
+        return 'css';
+      case 'json':
+        return 'json';
+      default:
+        return 'typescript';
     }
   };
 
-  const exportAsZip = async () => {
-    if (!projectFiles || projectFiles.length === 0) return;
-    const zip = new JSZip();
-    for (const file of projectFiles) {
-      zip.file(file.file_path, file.file_content);
-    }
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const safeName = (project?.name || 'project').toLowerCase().replace(/[^a-z0-9-_.]+/g, '-');
-    a.href = url;
-    a.download = `${safeName}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const getCurrentCode = () => {
-    if (projectFiles.length === 0) return '';
-    
-    // Get main app file or first file
-    const appFile = projectFiles.find(f => 
-      f.file_path.includes('App.') && 
-      (f.file_path.endsWith('.tsx') || f.file_path.endsWith('.jsx'))
-    ) || projectFiles[0];
-    
-    return appFile?.file_content || '';
-  };
-
-
-  if (loading) {
+  if (loading || !project) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Caricamento...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Caricamento progetto...</p>
+        </div>
       </div>
     );
   }
-
-  if (!project) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Progetto non trovato</p>
-      </div>
-    );
-  }
-
-  const currentHtml = optimisticHtml || generatePreviewHtml(projectFiles);
-  const displayCode = getCurrentCode();
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="h-14 border-b border-border bg-card flex items-center px-4 gap-4">
-        {/* Left section */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/')}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="text-foreground hover:text-primary">
-                {isEditingName ? (
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Input
-                      value={projectName}
-                      onChange={(e) => setProjectName(e.target.value)}
-                      onBlur={handleProjectNameSave}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleProjectNameSave();
-                        } else if (e.key === 'Escape') {
-                          setProjectName(project.name);
-                          setIsEditingName(false);
-                        }
-                      }}
-                      className="w-48 h-7"
-                      autoFocus
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <span className="max-w-48 truncate">{project.name}</span>
-                    <ChevronDown className="w-4 h-4 ml-1" />
-                  </>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => navigate('/')}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Torna alla home
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsEditingName(true)}>
-                <Edit3 className="w-4 h-4 mr-2" />
-                Rinomina progetto
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Settings className="w-4 h-4 mr-2" />
-                Impostazioni
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <HelpCircle className="w-4 h-4 mr-2" />
-                Aiuto
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Center section */}
-        <div className="flex items-center gap-1 bg-muted rounded-md p-1">
-          <Button
-            variant={viewMode === 'preview' ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode('preview')}
-            className="text-xs"
-          >
-            <Monitor className="w-4 h-4 mr-1" />
-            Preview
-          </Button>
-          <Button
-            variant={viewMode === 'code' ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode('code')}
-            className="text-xs"
-          >
-            <Code className="w-4 h-4 mr-1" />
-            Code
-          </Button>
-        </div>
-
-        {/* Right section */}
-        <div className="flex items-center gap-2 ml-auto">
-          {viewMode === 'preview' && (
-            <div className="flex items-center gap-1 bg-muted rounded-md p-1">
-              <Button
-                variant={deviceSize === 'mobile' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setDeviceSize('mobile')}
-                className="text-xs"
+      <div className="border-b bg-card">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Torna ai progetti
+            </Button>
+            
+            <div className="h-6 w-px bg-border" />
+            
+            {isEditingName ? (
+              <div className="flex items-center space-x-2">
+                <Input
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  className="h-8 max-w-xs"
+                  autoFocus
+                  onBlur={handleSaveName}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSaveName();
+                    } else if (e.key === 'Escape') {
+                      setProjectName(project?.name || '');
+                      setIsEditingName(false);
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleSaveName}
+                  className="h-8 w-8 p-0"
+                >
+                  <Edit3 className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsEditingName(true)}
+                className="flex items-center space-x-2 px-2 py-1 rounded-md hover:bg-muted/50 transition-colors group"
               >
-                <Smartphone className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={deviceSize === 'tablet' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setDeviceSize('tablet')}
-                className="text-xs"
-              >
-                <Tablet className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={deviceSize === 'desktop' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setDeviceSize('desktop')}
-                className="text-xs"
-              >
-                <Monitor className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          <Button
-            size="sm"
-            onClick={exportAsZip}
-            className="text-xs"
-          >
-            Esporta ZIP
-          </Button>
+                <h1 className="text-lg font-semibold">{project?.name}</h1>
+                <Edit3 className="h-4 w-4 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </button>
+            )}
+          </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={refreshPreview}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={openInNewTab}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/projects/${projectId}`, '_blank')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Apri in nuova scheda
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={downloadProject}>
+                  <Github className="h-4 w-4 mr-2" />
+                  Scarica progetto
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Database className="h-4 w-4 mr-2" />
+                  Impostazioni account
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex">
-        {/* Left panel - Chat */}
-        <div className="w-96 border-r border-border bg-card flex flex-col">
-          {/* Chat messages */}
+      {/* Main Layout - Two Columns */}
+      <div className="flex h-[calc(100vh-73px)]">
+        {/* Left Panel - Chat */}
+        <div className="w-2/5 border-r bg-card flex flex-col">
+          {/* Chat Messages */}
           <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {chatMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-3 max-w-[280px]",
-                    message.type === 'user' ? "ml-auto" : "",
-                    message.type === 'system' ? "justify-center" : ""
-                  )}
-                >
-                  {message.type !== 'user' && message.type !== 'system' && (
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-primary-foreground" />
+            {chatMessages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Bot className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Inizia una nuova conversazione</h3>
+                <p className="text-muted-foreground text-sm max-w-sm">
+                  Descrivi cosa vuoi creare e l'AI genererà il codice per te
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {chatMessages.map((message) => (
+                  <div key={message.id} className={cn(
+                    "flex gap-3 max-w-full",
+                    message.type === 'user' ? "flex-row-reverse" : "flex-row"
+                  )}>
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium",
+                      message.type === 'user' ? "bg-primary" : "bg-secondary"
+                    )}>
+                      {message.type === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                     </div>
-                  )}
-                  
-                  <div
-                    className={cn(
-                      "rounded-lg px-3 py-2 text-sm break-words",
-                      message.type === 'user'
-                        ? "bg-primary text-primary-foreground ml-auto"
-                        : message.type === 'system'
-                        ? "bg-destructive text-destructive-foreground text-center"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    <div className="whitespace-pre-wrap">{message.content}</div>
-                    {message.tokens_used && (
-                      <div className="text-xs opacity-70 mt-1">
-                        {message.tokens_used} tokens
+                    <div className={cn(
+                      "flex-1 px-4 py-3 rounded-lg max-w-[85%]",
+                      message.type === 'user' 
+                        ? "bg-primary text-primary-foreground ml-auto" 
+                        : "bg-muted"
+                    )}>
+                      <div className="text-sm whitespace-pre-wrap break-words">
+                        {message.content}
                       </div>
-                    )}
-                  </div>
-                  
-                  {message.type === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {isGenerating && (
-                <div className="flex gap-3 max-w-[280px]">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="animate-pulse">Generazione in corso...</div>
+                      {message.tokens_used && (
+                        <div className="text-xs opacity-70 mt-2">
+                          Token utilizzati: {message.tokens_used}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
           </ScrollArea>
 
-          {/* Chat input */}
-          <div className="p-4 border-t border-border">
-            <div className="flex gap-2">
+          {/* Chat Input */}
+          <div className="border-t p-4">
+            <div className="flex space-x-2">
               <Textarea
                 value={newPrompt}
                 onChange={(e) => setNewPrompt(e.target.value)}
-                placeholder="Descrivi le modifiche che vuoi apportare..."
+                placeholder="Descrivi cosa vuoi creare o modificare..."
                 className="flex-1 min-h-[80px] resize-none"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
-                    handleSendPrompt();
+                    handleGenerateApp();
                   }
                 }}
                 disabled={isGenerating}
               />
               <Button
-                onClick={handleSendPrompt}
+                onClick={handleGenerateApp}
                 disabled={!newPrompt.trim() || isGenerating}
                 size="sm"
                 className="self-end"
               >
-                <Send className="w-4 h-4" />
+                {isGenerating ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Generando...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Premi Ctrl+Enter per inviare
+            </p>
           </div>
         </div>
 
-        {/* Right panel - Preview/Code */}
-        <div className="flex-1 flex flex-col bg-muted/20">
-          {viewMode === 'preview' ? (
-            <div className="flex-1">
-              <LivePreview files={sandpackFiles} />
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col">
-              {/* File tabs */}
-              {projectFiles.length > 0 && (
-                <div className="border-b border-border bg-card">
-                  <Tabs 
-                    value={currentFile?.id || projectFiles[0]?.id} 
-                    onValueChange={(fileId) => {
-                      const file = projectFiles.find(f => f.id === fileId);
-                      if (file) handleFileSelect(file);
-                    }}
-                  >
-                    <TabsList className="w-full justify-start rounded-none h-10 bg-transparent">
-                      {projectFiles.map((file) => (
-                        <TabsTrigger 
-                          key={file.id} 
-                          value={file.id}
-                          className="data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
-                        >
-                          <FileText className="w-4 h-4 mr-2" />
-                          {file.file_path.split('/').pop()}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
-                </div>
-              )}
-              
-              {/* Monaco Editor */}
-              <div className="flex-1">
-                {currentFile ? (
-                  <CodeEditor
-                    code={currentFile.file_content}
-                    onChange={handleCodeChange}
-                    language={currentFile.file_type === 'typescript' ? 'typescript' : 'javascript'}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-muted-foreground">Seleziona un file per iniziare a modificare</p>
+        {/* Right Panel - Code Editor & Preview */}
+        <div className="flex-1 flex flex-col">
+          {/* Tabs for Preview/Code */}
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="flex-1 flex flex-col">
+            <div className="border-b bg-background px-4 py-2">
+              <div className="flex items-center justify-between">
+                <TabsList className="grid w-48 grid-cols-2">
+                  <TabsTrigger value="preview" className="flex items-center space-x-2">
+                    <Eye className="h-4 w-4" />
+                    <span>Preview</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="code" className="flex items-center space-x-2">
+                    <Code className="h-4 w-4" />
+                    <span>Codice</span>
+                  </TabsTrigger>
+                </TabsList>
+                
+                {viewMode === 'preview' && (
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center border rounded-md">
+                      <Button
+                        variant={deviceSize === 'mobile' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setDeviceSize('mobile')}
+                        className="rounded-r-none"
+                      >
+                        <Smartphone className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={deviceSize === 'tablet' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setDeviceSize('tablet')}
+                        className="rounded-none border-x"
+                      >
+                        <Tablet className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={deviceSize === 'desktop' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setDeviceSize('desktop')}
+                        className="rounded-l-none"
+                      >
+                        <Monitor className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-          )}
+
+            <TabsContent value="preview" className="flex-1 m-0 p-4">
+              <div className="h-full flex items-center justify-center bg-muted/20 rounded-lg">
+                <div className={cn(
+                  "bg-white rounded-lg shadow-lg overflow-hidden",
+                  deviceSize === 'mobile' && "w-[375px] h-[667px]",
+                  deviceSize === 'tablet' && "w-[768px] h-[1024px]",
+                  deviceSize === 'desktop' && "w-full h-full"
+                )}>
+                  <LivePreview key={previewKey} files={sandpackFiles} />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="code" className="flex-1 m-0 flex">
+              {/* File Tree */}
+              <div className="w-64 border-r bg-card p-4">
+                <h3 className="text-sm font-semibold mb-3 flex items-center">
+                  <FileText className="h-4 w-4 mr-2" />
+                  File del progetto
+                </h3>
+                <ScrollArea className="h-full">
+                  <div className="space-y-1">
+                    {projectFiles.map((file) => (
+                      <button
+                        key={file.id}
+                        onClick={() => setCurrentFile(file)}
+                        className={cn(
+                          "w-full text-left text-sm px-2 py-1 rounded-md hover:bg-muted/50 transition-colors",
+                          currentFile?.id === file.id && "bg-muted text-foreground font-medium"
+                        )}
+                      >
+                        {file.file_path}
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+              
+              {/* Code Editor */}
+              <div className="flex-1">
+                {currentFile ? (
+                  <CodeEditor
+                    code={currentFile.file_content}
+                    onChange={(newCode) => {
+                      // Update the current file content
+                      setCurrentFile(prev => prev ? { ...prev, file_content: newCode } : null);
+                      
+                      // Update sandpack files for live preview
+                      setSandpackFiles(prev => 
+                        prev.map(f => 
+                          f.path === (currentFile.file_path.startsWith('/') ? currentFile.file_path : `/${currentFile.file_path}`)
+                            ? { ...f, content: newCode }
+                            : f
+                        )
+                      );
+                    }}
+                    language={getLanguageFromPath(currentFile.file_path)}
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Seleziona un file per modificarlo</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

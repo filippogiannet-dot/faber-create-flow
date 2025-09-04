@@ -42,13 +42,19 @@ IMPORTANT: Always return a valid JSON response in this exact format:
 Rules:
 - Use TypeScript and modern React (function components with hooks)
 - Use Tailwind CSS for styling with semantic classes
+- Import UI components from @rewind-ui/core for buttons, forms, tables, modals, etc.
+- Use @rewind-ui/core components like: Button, Input, Modal, Table, Card, Badge, etc.
 - Make components responsive and accessible
 - Include proper TypeScript types
 - Keep components clean and well-structured
 - Always include at least one main App.tsx file
 - For complex apps, split into multiple component files
+- Include boilerplate files when needed (package.json, index.html, main.tsx)
 
-Generate practical, working code that demonstrates the requested functionality.`;
+Example imports for UI components:
+import { Button, Input, Modal, Table, Card, Badge } from '@rewind-ui/core';
+
+Generate practical, working code that demonstrates the requested functionality with complete UI components.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
