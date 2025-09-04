@@ -98,7 +98,6 @@ export class ErrorBoundary extends Component<Props, State> {
     const ensureMain = (appImportPath: string) => `import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { ErrorBoundary } from './ErrorBoundary'
 import * as AppModule from '${appImportPath}'
 
 const ResolvedApp = (AppModule as any)?.default ?? (AppModule as any)?.App;
@@ -125,9 +124,7 @@ function IsolatedApp() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <IsolatedApp />
-    </ErrorBoundary>
+    <IsolatedApp />
   </React.StrictMode>
 )`;
 
@@ -153,8 +150,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       mapped['/index.html'] = { code: defaultIndexHtml };
     }
 
-    // Always inject ErrorBoundary
-    mapped['/src/ErrorBoundary.tsx'] = { code: errorBoundaryCode };
+    // Note: ErrorBoundary is handled at component level, not needed in sandbox
 
     // Inject basic UI fallbacks (shadcn-like) only if missing, so imports like "@/components/ui/button" won't break
     const ensureFallback = (p: string, code: string) => {
