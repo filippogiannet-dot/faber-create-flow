@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot } from "lucide-react";
+import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import LivePreview from "@/components/LivePreview";
 import CodeEditor from "@/components/CodeEditor";
@@ -166,17 +166,19 @@ export default function Editor() {
     }
   };
 
-  const MessageIcon = ({ type }: { type: ChatMessage['type'] }) => {
-    switch (type) {
-      case 'user':
-        return <User className="h-4 w-4 text-primary" />;
-      case 'assistant':
-        return <Bot className="h-4 w-4 text-green-500" />;
-      default:
-        return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />;
+  const MessageIcon = ({ message }: { message: ChatMessage }) => {
+    if (message.type === 'user') return <User className="h-4 w-4 text-primary" />;
+    if (message.type === 'assistant') return <Bot className="h-4 w-4 text-green-500" />;
+    // status: pick icon based on content
+    const t = message.text || '';
+    if (t.startsWith('✅') || /successo|completata|aggiornata/i.test(t)) {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
     }
+    if (t.startsWith('❌') || /errore|failed|impossibile/i.test(t)) {
+      return <AlertTriangle className="h-4 w-4 text-destructive" />;
+    }
+    return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />;
   };
-
   return (
     <ErrorBoundary>
       <div className="h-screen w-screen bg-black flex overflow-hidden">
@@ -214,7 +216,7 @@ export default function Editor() {
                   }`}
                 >
                   <div className="flex-shrink-0 mt-0.5">
-                    <MessageIcon type={message.type} />
+                    <MessageIcon message={message} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-white break-words">

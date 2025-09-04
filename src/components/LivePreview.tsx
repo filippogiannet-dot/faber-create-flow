@@ -239,6 +239,7 @@ export default Badge;`);
     <div className="h-full w-full bg-black">
       <ErrorBoundary>
         <SandpackProvider
+          key={Object.keys(sandpackFiles).join('|') + ':' + Object.values(sandpackFiles).reduce((s, f) => s + (f.code?.length || 0), 0)}
           template="react-ts"
           theme="dark"
           files={sandpackFiles}
