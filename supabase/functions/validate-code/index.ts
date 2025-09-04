@@ -66,7 +66,8 @@ serve(async (req) => {
       'react', 'react-dom', 'react-router-dom', 'zustand', 'react-hook-form',
       'zod', '@hookform/resolvers', 'framer-motion', 'lucide-react',
       '@radix-ui/', '@mui/', '@mantine/', '@chakra-ui/', '@headlessui/react',
-      'tailwindcss', 'class-variance-authority', 'tailwind-merge', 'date-fns', 'uuid'
+      'tailwindcss', 'class-variance-authority', 'tailwind-merge', 'date-fns', 'uuid',
+      'recharts'
     ];
 
     for (const file of files) {
