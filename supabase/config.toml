@@ -34,3 +34,6 @@ verify_jwt = false
 
 [functions.update-project]
 verify_jwt = true
+
+[functions.logging]
+verify_jwt = false

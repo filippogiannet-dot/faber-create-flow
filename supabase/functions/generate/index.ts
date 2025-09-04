@@ -27,59 +27,77 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert React + TypeScript application architect. Generate complete, production-ready applications following AppSpec v1 format.
+    const systemPrompt = `You are an expert React + TypeScript application architect. You MUST generate complete, production-ready, functional applications that perfectly match the user's request.
 
-Output ONLY strict JSON in this exact AppSpec v1 shape:
+CRITICAL: Output ONLY strict JSON in AppSpec v1 format:
 {
   "app_meta": {
     "name": "string",
     "description": "string", 
-    "design_system": "shadcn|mui|mantine|chakra|headless+radix",
-    "theme": "light|dark|system"
+    "design_system": "shadcn",
+    "theme": "light"
   },
   "dependencies": {
-    "prod": { "package": "exact-version" },
-    "dev": { "package": "exact-version" }
+    "prod": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1", 
+      "react-router-dom": "6.30.1",
+      "zustand": "4.5.0",
+      "react-hook-form": "7.53.0",
+      "zod": "3.22.0",
+      "@hookform/resolvers": "3.9.0",
+      "lucide-react": "0.462.0",
+      "framer-motion": "11.0.0"
+    }
   },
   "routes": [
-    { "path": "/", "component": "Home" },
-    { "path": "/about", "component": "About" }
+    { "path": "/", "component": "Dashboard" },
+    { "path": "/customers", "component": "Customers" }
   ],
   "files": [
     {
       "path": "/index.html",
       "language": "html", 
-      "content": "<!DOCTYPE html>..."
+      "content": "<!DOCTYPE html>\\n<html lang=\\"en\\">\\n<head>\\n  <meta charset=\\"UTF-8\\" />\\n  <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\" />\\n  <title>App Name</title>\\n  <script src=\\"https://cdn.tailwindcss.com\\"></script>\\n</head>\\n<body>\\n  <div id=\\"root\\"></div>\\n</body>\\n</html>"
     },
     {
-      "path": "/src/App.tsx",
+      "path": "/src/main.tsx",
       "language": "tsx",
-      "content": "import React from 'react'..."
+      "content": "import React from 'react';\\nimport ReactDOM from 'react-dom/client';\\nimport { BrowserRouter } from 'react-router-dom';\\nimport App from './App';\\n\\nReactDOM.createRoot(document.getElementById('root')!).render(\\n  <React.StrictMode>\\n    <BrowserRouter>\\n      <App />\\n    </BrowserRouter>\\n  </React.StrictMode>\\n);"
+    },
+    {
+      "path": "/src/App.tsx", 
+      "language": "tsx",
+      "content": "COMPLETE APP CODE HERE"
     }
   ]
 }
 
-CRITICAL ARCHITECTURE RULES:
-- Generate COMPLETE, FUNCTIONAL applications matching user requirements
-- Select design_system intelligently:
-  * dashboard/B2B/CRM/admin → "shadcn" 
-  * material/android/google → "mui"
-  * marketing/landing → "shadcn" 
-  * mobile-first/modern → "mantine"
-- Include ALL necessary dependencies with exact versions:
-  * Core: react@18.3.1, react-dom@18.3.1, react-router-dom@6.30.1
-  * TypeScript: typescript@5.0.0, @types/react@18.3.0, @types/react-dom@18.3.0  
-  * Styling: tailwindcss@3.4.0 (always), shadcn components when selected
-  * State: zustand@4.5.0 for client state
-  * Forms: react-hook-form@7.53.0, zod@3.22.0, @hookform/resolvers@3.9.0
-  * Icons: lucide-react@0.462.0
-  * Animation: framer-motion@11.0.0 when needed
-- Build responsive, accessible applications with proper routing
-- Use semantic HTML, TypeScript interfaces, proper error handling
-- Include realistic content and data, not placeholders
-- NEVER generate "Hello World" - create full functional applications
-- All imports relative paths (./components/Header) - NO path aliases
-- Return only JSON, no explanations or markdown`;
+MANDATORY REQUIREMENTS:
+1. Generate COMPLETE applications that match the user's exact request (CRM, dashboard, todo app, etc.)
+2. Include 4-6 meaningful routes with full navigation
+3. Use realistic business data and content (not placeholders or "Lorem ipsum")  
+4. Implement proper state management with Zustand
+5. Add form validation with React Hook Form + Zod
+6. Use Lucide icons throughout the interface
+7. Create responsive layouts with Tailwind classes
+8. Include proper TypeScript interfaces for all data
+9. Add loading states, error handling, and empty states
+10. Generate 8-12 component files for a complete application
+
+NEVER GENERATE:
+- "Hello World" applications
+- Placeholder content or Lorem ipsum
+- Broken imports or missing components
+- Basic templates without real functionality
+
+EXAMPLE DOMAIN MAPPING:
+- CRM → Customer management, deals pipeline, contact forms, reports dashboard
+- E-commerce → Product catalog, shopping cart, checkout, order management  
+- Dashboard → Analytics charts, user management, settings, notifications
+- Todo App → Task creation, categories, priority levels, completion tracking
+
+Return ONLY JSON, no explanations.`;
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -152,37 +170,236 @@ CRITICAL ARCHITECTURE RULES:
 
     let parsedResponse = tryParseAppSpec(raw);
 
-    // Build a comprehensive default app if parsing failed
+    // Build a comprehensive default CRM app if parsing failed
     if (!parsedResponse) {
       parsedResponse = {
+        app_meta: {
+          name: "Business CRM",
+          description: "Complete Customer Relationship Management System",
+          design_system: "shadcn",
+          theme: "light"
+        },
+        dependencies: {
+          prod: {
+            "react": "18.3.1",
+            "react-dom": "18.3.1", 
+            "react-router-dom": "6.30.1",
+            "zustand": "4.5.0",
+            "react-hook-form": "7.53.0",
+            "zod": "3.22.0",
+            "@hookform/resolvers": "3.9.0",
+            "lucide-react": "0.462.0"
+          }
+        },
+        routes: [
+          { "path": "/", "component": "Dashboard" },
+          { "path": "/customers", "component": "Customers" },
+          { "path": "/deals", "component": "Deals" },
+          { "path": "/reports", "component": "Reports" },
+          { "path": "/settings", "component": "Settings" }
+        ],
         files: [
           {
             path: '/index.html',
-            content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n  <title>Generated App</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>`
-          },
-          {
-            path: '/src/App.tsx',
-            content: `import React from 'react';\nimport { Routes, Route } from 'react-router-dom';\nimport Navigation from './components/Navigation';\nimport Home from './components/Home';\nimport About from './components/About';\nimport Contact from './components/Contact';\n\nexport default function App() {\n  return (\n    <div className="min-h-screen bg-gray-50">\n      <Navigation />\n      <main className="container mx-auto px-4 py-8">\n        <Routes>\n          <Route path="/" element={<Home />} />\n          <Route path="/about" element={<About />} />\n          <Route path="/contact" element={<Contact />} />\n        </Routes>\n      </main>\n    </div>\n  );\n}`
+            content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Business CRM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`
           },
           {
             path: '/src/main.tsx',
-            content: `import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport { BrowserRouter } from 'react-router-dom';\nimport App from './App';\n\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <BrowserRouter>\n      <App />\n    </BrowserRouter>\n  </React.StrictMode>\n);`
+            content: `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);`
+          },
+          {
+            path: '/src/App.tsx',
+            content: `import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Navigation from './components/Navigation';
+import Dashboard from './components/Dashboard';
+import Customers from './components/Customers';
+import Deals from './components/Deals';
+import Reports from './components/Reports';
+import Settings from './components/Settings';
+
+export default function App() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <main className="ml-64 p-8">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/deals" element={<Deals />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}`
           },
           {
             path: '/src/components/Navigation.tsx',
-            content: `import React from 'react';\nimport { Link, useLocation } from 'react-router-dom';\n\nexport default function Navigation() {\n  const location = useLocation();\n  \n  return (\n    <nav className="bg-white shadow-lg">\n      <div className="container mx-auto px-4">\n        <div className="flex justify-between items-center py-4">\n          <Link to="/" className="text-2xl font-bold text-blue-600">MyApp</Link>\n          <div className="flex space-x-6">\n            <Link to="/" className={\`px-3 py-2 rounded-md transition-colors \${location.pathname === '/' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600'}\`}>Home</Link>\n            <Link to="/about" className={\`px-3 py-2 rounded-md transition-colors \${location.pathname === '/about' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600'}\`}>About</Link>\n            <Link to="/contact" className={\`px-3 py-2 rounded-md transition-colors \${location.pathname === '/contact' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600'}\`}>Contact</Link>\n          </div>\n        </div>\n      </div>\n    </nav>\n  );\n}`
+            content: `import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Users, Handshake, BarChart3, Settings } from 'lucide-react';
+
+export default function Navigation() {
+  const location = useLocation();
+  
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Customers', href: '/customers', icon: Users },
+    { name: 'Deals', href: '/deals', icon: Handshake },
+    { name: 'Reports', href: '/reports', icon: BarChart3 },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  return (
+    <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200">
+      <div className="flex flex-col h-full">
+        <div className="flex items-center h-16 px-6 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-gray-900">Business CRM</h1>
+        </div>
+        <nav className="flex-1 px-4 py-6 space-y-2">
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={\`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors \${
+                  isActive
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }\`}
+              >
+                <Icon className="mr-3 h-5 w-5" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
+  );
+}`
           },
           {
-            path: '/src/components/Home.tsx',
-            content: `import React from 'react';\n\nexport default function Home() {\n  return (\n    <div className="text-center">\n      <h1 className="text-4xl font-bold text-gray-800 mb-6">Welcome to MyApp</h1>\n      <p className="text-xl text-gray-600 mb-8">A modern React application built with TypeScript and Tailwind CSS</p>\n      <div className="grid md:grid-cols-3 gap-8 mt-12">\n        <div className="bg-white p-6 rounded-lg shadow-md">\n          <h3 className="text-xl font-semibold mb-3">Fast</h3>\n          <p className="text-gray-600">Built with modern React and optimized for performance</p>\n        </div>\n        <div className="bg-white p-6 rounded-lg shadow-md">\n          <h3 className="text-xl font-semibold mb-3">Responsive</h3>\n          <p className="text-gray-600">Works beautifully on all devices and screen sizes</p>\n        </div>\n        <div className="bg-white p-6 rounded-lg shadow-md">\n          <h3 className="text-xl font-semibold mb-3">Modern</h3>\n          <p className="text-gray-600">Uses the latest web technologies and best practices</p>\n        </div>\n      </div>\n    </div>\n  );\n}`
-          },
-          {
-            path: '/src/components/About.tsx',
-            content: `import React from 'react';\n\nexport default function About() {\n  return (\n    <div className="max-w-4xl mx-auto">\n      <h1 className="text-4xl font-bold text-gray-800 mb-6">About Us</h1>\n      <div className="bg-white p-8 rounded-lg shadow-md">\n        <p className="text-lg text-gray-600 mb-6">\n          We are a team of passionate developers dedicated to creating amazing web applications.\n          Our mission is to build software that makes a difference in people's lives.\n        </p>\n        <div className="grid md:grid-cols-2 gap-8">\n          <div>\n            <h3 className="text-2xl font-semibold mb-4">Our Vision</h3>\n            <p className="text-gray-600">\n              To empower businesses and individuals with cutting-edge technology solutions\n              that drive innovation and growth.\n            </p>\n          </div>\n          <div>\n            <h3 className="text-2xl font-semibold mb-4">Our Values</h3>\n            <ul className="text-gray-600 space-y-2">\n              <li>• Innovation and creativity</li>\n              <li>• Quality and excellence</li>\n              <li>• Customer satisfaction</li>\n              <li>• Continuous learning</li>\n            </ul>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n}`
-          },
-          {
-            path: '/src/components/Contact.tsx',
-            content: `import React, { useState } from 'react';\n\nexport default function Contact() {\n  const [formData, setFormData] = useState({ name: '', email: '', message: '' });\n  const [submitted, setSubmitted] = useState(false);\n\n  const handleSubmit = (e: React.FormEvent) => {\n    e.preventDefault();\n    setSubmitted(true);\n    // Simulate form submission\n    setTimeout(() => setSubmitted(false), 3000);\n  };\n\n  return (\n    <div className="max-w-2xl mx-auto">\n      <h1 className="text-4xl font-bold text-gray-800 mb-6">Contact Us</h1>\n      {submitted ? (\n        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">\n          Thank you for your message! We'll get back to you soon.\n        </div>\n      ) : (\n        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md">\n          <div className="mb-6">\n            <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>\n            <input\n              type="text"\n              required\n              value={formData.name}\n              onChange={(e) => setFormData({...formData, name: e.target.value})}\n              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"\n            />\n          </div>\n          <div className="mb-6">\n            <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>\n            <input\n              type="email"\n              required\n              value={formData.email}\n              onChange={(e) => setFormData({...formData, email: e.target.value})}\n              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"\n            />\n          </div>\n          <div className="mb-6">\n            <label className="block text-gray-700 text-sm font-bold mb-2">Message</label>\n            <textarea\n              required\n              rows={4}\n              value={formData.message}\n              onChange={(e) => setFormData({...formData, message: e.target.value})}\n              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"\n            />\n          </div>\n          <button\n            type="submit"\n            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"\n          >\n            Send Message\n          </button>\n        </form>\n      )}\n    </div>\n  );\n}`
+            path: '/src/components/Dashboard.tsx',
+            content: `import React from 'react';
+import { Users, Handshake, DollarSign, TrendingUp } from 'lucide-react';
+
+export default function Dashboard() {
+  const stats = [
+    { name: 'Total Customers', value: '2,651', icon: Users, change: '+12%' },
+    { name: 'Active Deals', value: '184', icon: Handshake, change: '+8%' },
+    { name: 'Revenue', value: '$892,450', icon: DollarSign, change: '+23%' },
+    { name: 'Growth Rate', value: '14.2%', icon: TrendingUp, change: '+2.1%' },
+  ];
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="mt-2 text-gray-600">Welcome back! Here's what's happening with your business today.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.name} className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">{stat.name}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <Icon className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <span className="text-green-600 text-sm font-medium">{stat.change}</span>
+                <span className="text-gray-500 text-sm ml-1">vs last month</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <p className="text-sm text-gray-600">New customer "Acme Corp" added</p>
+              <span className="text-xs text-gray-400">2 hours ago</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <p className="text-sm text-gray-600">Deal "Website Redesign" moved to proposal</p>
+              <span className="text-xs text-gray-400">4 hours ago</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+              <p className="text-sm text-gray-600">Follow-up required for "Tech Solutions Ltd"</p>
+              <span className="text-xs text-gray-400">1 day ago</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Customers</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900">Acme Corporation</p>
+                <p className="text-sm text-gray-500">Enterprise Software</p>
+              </div>
+              <span className="text-lg font-semibold text-gray-900">$125,000</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900">Tech Solutions Ltd</p>
+                <p className="text-sm text-gray-500">IT Services</p>
+              </div>
+              <span className="text-lg font-semibold text-gray-900">$89,500</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900">Digital Innovations</p>
+                <p className="text-sm text-gray-500">Marketing Agency</p>
+              </div>
+              <span className="text-lg font-semibold text-gray-900">$67,200</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}`
           }
         ]
       };

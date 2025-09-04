@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      build_logs: {
+        Row: {
+          created_at: string
+          deps_added: Json | null
+          duration_ms: number | null
+          errors: Json | null
+          files_changed: Json | null
+          id: string
+          metadata: Json | null
+          phase: string
+          project_id: string | null
+          status: string
+          user_id: string | null
+          warnings: Json | null
+        }
+        Insert: {
+          created_at?: string
+          deps_added?: Json | null
+          duration_ms?: number | null
+          errors?: Json | null
+          files_changed?: Json | null
+          id?: string
+          metadata?: Json | null
+          phase: string
+          project_id?: string | null
+          status: string
+          user_id?: string | null
+          warnings?: Json | null
+        }
+        Update: {
+          created_at?: string
+          deps_added?: Json | null
+          duration_ms?: number | null
+          errors?: Json | null
+          files_changed?: Json | null
+          id?: string
+          metadata?: Json | null
+          phase?: string
+          project_id?: string | null
+          status?: string
+          user_id?: string | null
+          warnings?: Json | null
+        }
+        Relationships: []
+      }
       generation_logs: {
         Row: {
           created_at: string
@@ -51,6 +96,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      preview_errors: {
+        Row: {
+          browser_info: Json | null
+          column_number: number | null
+          created_at: string
+          error_message: string
+          error_type: string
+          file_path: string | null
+          id: string
+          line_number: number | null
+          project_id: string | null
+          stack_trace: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser_info?: Json | null
+          column_number?: number | null
+          created_at?: string
+          error_message: string
+          error_type: string
+          file_path?: string | null
+          id?: string
+          line_number?: number | null
+          project_id?: string | null
+          stack_trace?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser_info?: Json | null
+          column_number?: number | null
+          created_at?: string
+          error_message?: string
+          error_type?: string
+          file_path?: string | null
+          id?: string
+          line_number?: number | null
+          project_id?: string | null
+          stack_trace?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -253,6 +340,39 @@ export type Database = {
           },
         ]
       }
+      quality_checks: {
+        Row: {
+          check_type: string
+          created_at: string
+          id: string
+          project_id: string | null
+          results: Json
+          status: string
+          suggestions: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          check_type: string
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          results: Json
+          status: string
+          suggestions?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          check_type?: string
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          results?: Json
+          status?: string
+          suggestions?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       snapshots: {
         Row: {
           created_at: string | null
@@ -303,6 +423,19 @@ export type Database = {
       check_user_limits: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      get_project_logs: {
+        Args: { p_limit?: number; p_project_id: string }
+        Returns: {
+          created_at: string
+          duration_ms: number
+          errors: Json
+          id: string
+          log_type: string
+          phase: string
+          status: string
+          warnings: Json
+        }[]
       }
       increment_usage: {
         Args: { project_id?: string; user_id: string }

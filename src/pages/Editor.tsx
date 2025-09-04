@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot, CheckCircle } from "lucide-react";
+import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot, CheckCircle, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import LivePreview from "@/components/LivePreview";
 import CodeEditor from "@/components/CodeEditor";
@@ -25,8 +25,9 @@ export default function Editor() {
   const [completed, setCompleted] = useState(false);
   const [hasGeneratedOnce, setHasGeneratedOnce] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState<Array<{ path: string; content: string }>>([]);
-  const [currentView, setCurrentView] = useState<"preview" | "code">("preview");
+  const [currentView, setCurrentView] = useState<"preview" | "code" | "logs">("preview");
   const [validationStatus, setValidationStatus] = useState<{ isValid: boolean; errors: any[] }>({ isValid: true, errors: [] });
+  const [projectLogs, setProjectLogs] = useState<any[]>([]);
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [fileContent, setFileContent] = useState<string>("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
@@ -72,10 +73,52 @@ export default function Editor() {
     ));
   };
 
+  // Logging utility
+  const logBuildPhase = async (phase: string, status: string, durationMs?: number, errors?: any[], warnings?: any[], depsAdded?: string[], filesChanged?: string[]) => {
+    try {
+      await supabase.functions.invoke("logging", {
+        body: {
+          projectId,
+          phase,
+          status,
+          durationMs,
+          errors: errors || [],
+          warnings: warnings || [],
+          depsAdded: depsAdded || [],
+          filesChanged: filesChanged || [],
+          metadata: { timestamp: new Date().toISOString() }
+        }
+      });
+    } catch (error) {
+      console.error('Logging failed:', error);
+    }
+  };
+
+  const loadProjectLogs = async () => {
+    try {
+      const { data } = await supabase.functions.invoke("logging", {
+        body: { action: 'get-logs', projectId }
+      });
+      if (data) {
+        setProjectLogs(data.buildLogs || []);
+      }
+    } catch (error) {
+      console.error('Failed to load logs:', error);
+    }
+  };
+
+  // Load logs on component mount
+  useEffect(() => {
+    if (projectId) {
+      loadProjectLogs();
+    }
+  }, [projectId]);
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
     const isInitialRun = !hasGeneratedOnce && generatedFiles.length === 0;
+    const startTime = Date.now();
 
     setLoading(true);
     setCompleted(false);
@@ -89,10 +132,14 @@ export default function Editor() {
     setPrompt("");
 
     try {
+      // Log start of generation
+      await logBuildPhase('analyze', 'started');
+      
       const initId = addChatMessage("🔄 Inizializzo la generazione...", 'status');
       
       await new Promise(resolve => setTimeout(resolve, 300));
       updateChatMessage(initId, "✅ Inizializzazione completata");
+      await logBuildPhase('analyze', 'success', Date.now() - startTime);
       
       const parseId = addChatMessage(isInitialRun ? "🔍 Analizzo il prompt per generare l'app..." : "🔧 Analizzo le modifiche richieste...", 'status');
       
@@ -112,8 +159,15 @@ export default function Editor() {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       if (data?.files && Array.isArray(data.files)) {
+        // Log successful generation
+        const filesChanged = data.files.map((f: any) => f.path);
+        await logBuildPhase('generate', 'success', Date.now() - startTime, [], [], [], filesChanged);
+        
         updateChatMessage(genId, isInitialRun ? "✅ Componenti generati" : "✅ Modifiche applicate");
         const previewId = addChatMessage("🎨 Aggiorno la preview...", 'status');
+
+        // Log build phase start
+        await logBuildPhase('build', 'started');
 
         if (isInitialRun || generatedFiles.length === 0) {
           setGeneratedFiles(data.files);
@@ -132,6 +186,11 @@ export default function Editor() {
         setCurrentView("preview");
 
         await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Log successful build and preview update
+        await logBuildPhase('build', 'success', Date.now() - startTime);
+        await logBuildPhase('preview', 'success', Date.now() - startTime);
+        
         updateChatMessage(previewId, isInitialRun ? "🚀 Preview aggiornata con successo!" : "🔄 Preview aggiornata.");
 
         if (isInitialRun) {
@@ -150,11 +209,15 @@ export default function Editor() {
         }
 
         setCompleted(true);
+        // Reload logs to show latest entries
+        loadProjectLogs();
       } else {
+        await logBuildPhase('generate', 'error', Date.now() - startTime, [{ message: 'Invalid response format' }]);
         throw new Error("Formato risposta non valido");
       }
     } catch (error) {
       console.error("Errore durante la generazione:", error);
+      await logBuildPhase('generate', 'error', Date.now() - startTime, [{ message: error.message }]);
       addChatMessage("❌ Errore durante la generazione dell'app", 'status');
       toast({
         variant: "destructive",
@@ -308,6 +371,15 @@ export default function Editor() {
                   <Code className="h-4 w-4 mr-1" />
                   Code Tree
                 </Button>
+                <Button
+                  variant={currentView === "logs" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setCurrentView("logs")}
+                  className="h-8 px-3 bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  <FileText className="h-4 w-4 mr-1" />
+                  Logs
+                </Button>
               </div>
             </div>
           </div>
@@ -338,7 +410,7 @@ export default function Editor() {
                   />
                 </ErrorBoundary>
               </div>
-            ) : (
+            ) : currentView === "code" ? (
               <div className="flex flex-1 overflow-hidden">
                 {/* File Tree */}
                 <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
@@ -409,6 +481,88 @@ export default function Editor() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            ) : (
+              /* Logs View */
+              <div className="flex-1 bg-black p-6 overflow-y-auto">
+                <div className="max-w-4xl mx-auto">
+                  <div className="mb-6">
+                    <h2 className="text-xl font-semibold text-white mb-2">Build Logs</h2>
+                    <p className="text-gray-400">Telemetria completa delle generazioni e build</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {projectLogs.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-400">Nessun log disponibile</p>
+                        <p className="text-gray-500 text-sm">I log appariranno dopo la prima generazione</p>
+                      </div>
+                    ) : (
+                      projectLogs.map((log, index) => (
+                        <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${
+                                log.status === 'success' ? 'bg-green-500' :
+                                log.status === 'error' ? 'bg-red-500' :
+                                log.status === 'warning' ? 'bg-yellow-500' :
+                                'bg-blue-500'
+                              }`}></div>
+                              <span className="text-white font-medium capitalize">{log.phase}</span>
+                              <Badge variant={
+                                log.status === 'success' ? 'default' :
+                                log.status === 'error' ? 'destructive' :
+                                'secondary'
+                              }>
+                                {log.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              {log.duration_ms && (
+                                <span className="text-gray-400 text-sm">{log.duration_ms}ms</span>
+                              )}
+                              <span className="text-gray-400 text-sm">
+                                {new Date(log.created_at).toLocaleTimeString()}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {log.errors && log.errors.length > 0 && (
+                            <div className="mt-3 p-3 bg-red-900/20 border border-red-700/50 rounded">
+                              <h4 className="text-red-400 font-medium mb-2">Errori:</h4>
+                              {log.errors.map((error: any, idx: number) => (
+                                <p key={idx} className="text-red-300 text-sm">{error.message}</p>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {log.warnings && log.warnings.length > 0 && (
+                            <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded">
+                              <h4 className="text-yellow-400 font-medium mb-2">Avvisi:</h4>
+                              {log.warnings.map((warning: any, idx: number) => (
+                                <p key={idx} className="text-yellow-300 text-sm">{warning.message}</p>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {log.files_changed && log.files_changed.length > 0 && (
+                            <div className="mt-3">
+                              <h4 className="text-gray-300 font-medium mb-2">File modificati ({log.files_changed.length}):</h4>
+                              <div className="flex flex-wrap gap-1">
+                                {log.files_changed.map((file: string, idx: number) => (
+                                  <span key={idx} className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                                    {file}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
