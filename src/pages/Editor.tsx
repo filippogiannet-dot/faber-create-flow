@@ -28,7 +28,8 @@ export default function Editor() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
     // Load chat history from localStorage
     const saved = localStorage.getItem(`chat-messages-${projectId}`);
-    return saved ? JSON.parse(saved) : [];
+    const parsed: any[] = saved ? JSON.parse(saved) : [];
+    return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
   });
   const chatEndRef = useRef<HTMLDivElement>(null);
 
