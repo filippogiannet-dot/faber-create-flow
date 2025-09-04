@@ -220,6 +220,8 @@ export default Badge;`);
 
     // Always enforce a Router-wrapped entry for the sandbox to prevent useRoutes errors
     mapped['/src/main.tsx'] = { code: ensureMain(appImport) };
+    // Sandpack react-ts template expects /src/index.tsx as entry; provide it too to override default Hello World
+    mapped['/src/index.tsx'] = { code: ensureMain(appImport) };
 
     setSandpackFiles(mapped);
   }, [files]);
