@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CodeEditor from "@/components/CodeEditor";
+import LivePreview from "@/components/LivePreview";
 import { 
   ArrowLeft, 
   Settings, 
@@ -23,7 +26,9 @@ import {
   ChevronDown,
   User,
   Bot,
-  Edit3
+  Edit3,
+  Eye,
+  FileText
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -68,6 +73,11 @@ interface ProjectFile {
 type ViewMode = 'preview' | 'code';
 type DeviceSize = 'mobile' | 'tablet' | 'desktop';
 
+interface FileData {
+  path: string;
+  content: string;
+}
+
 const Editor = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -85,6 +95,8 @@ const Editor = () => {
   const [projectName, setProjectName] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
   const [optimisticHtml, setOptimisticHtml] = useState<string | null>(null);
+  const [currentFile, setCurrentFile] = useState<ProjectFile | null>(null);
+  const [sandpackFiles, setSandpackFiles] = useState<FileData[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -113,10 +125,22 @@ const Editor = () => {
       }
 
       setProjectFiles(files || []);
+      
+      // Convert to Sandpack format and set current file
+      const sandpackFilesData: FileData[] = (files || []).map(file => ({
+        path: file.file_path.startsWith('/') ? file.file_path : `/${file.file_path}`,
+        content: file.file_content
+      }));
+      setSandpackFiles(sandpackFilesData);
+      
+      // Set the first file as current if none selected
+      if (!currentFile && files && files.length > 0) {
+        setCurrentFile(files[0]);
+      }
     } catch (error) {
       console.error('Error fetching project files:', error);
     }
-  }, [projectId]);
+  }, [projectId, currentFile]);
 
   // Generate preview HTML from project files
   const generatePreviewHtml = useCallback((files: ProjectFile[]): string => {
@@ -512,6 +536,34 @@ const Editor = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  // Handle file selection
+  const handleFileSelect = (file: ProjectFile) => {
+    setCurrentFile(file);
+  };
+
+  // Handle code changes in Monaco Editor
+  const handleCodeChange = (newCode: string) => {
+    if (!currentFile) return;
+    
+    // Update the current file content
+    const updatedFile = { ...currentFile, file_content: newCode };
+    setCurrentFile(updatedFile);
+    
+    // Update in project files
+    const updatedFiles = projectFiles.map(f => 
+      f.id === currentFile.id ? updatedFile : f
+    );
+    setProjectFiles(updatedFiles);
+    
+    // Update Sandpack files
+    const updatedSandpackFiles = sandpackFiles.map(f => 
+      f.path === (currentFile.file_path.startsWith('/') ? currentFile.file_path : `/${currentFile.file_path}`) 
+        ? { ...f, content: newCode } 
+        : f
+    );
+    setSandpackFiles(updatedSandpackFiles);
+  };
 
   const handleSendPrompt = async () => {
     if (!newPrompt.trim() || isGenerating || !projectId) return;
@@ -936,31 +988,52 @@ const Editor = () => {
         {/* Right panel - Preview/Code */}
         <div className="flex-1 flex flex-col bg-muted/20">
           {viewMode === 'preview' ? (
-            <div className="flex-1 flex items-center justify-center p-4">
-              <div 
-                className="bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300"
-                style={{ 
-                  width: getDeviceWidth(),
-                  height: deviceSize === 'mobile' ? '667px' : deviceSize === 'tablet' ? '1024px' : '100%',
-                  maxHeight: '100%'
-                }}
-              >
-                <iframe
-                  key={previewKey}
-                  ref={iframeRef}
-                  srcDoc={currentHtml}
-                  className="w-full h-full border-0"
-                  title="Preview"
-                  sandbox="allow-scripts allow-same-origin"
-                />
-              </div>
+            <div className="flex-1">
+              <LivePreview files={sandpackFiles} />
             </div>
           ) : (
-            <ScrollArea className="flex-1">
-              <pre className="p-4 text-sm font-mono bg-muted/50 min-h-full">
-                <code>{displayCode || 'Nessun codice generato ancora...'}</code>
-              </pre>
-            </ScrollArea>
+            <div className="flex-1 flex flex-col">
+              {/* File tabs */}
+              {projectFiles.length > 0 && (
+                <div className="border-b border-border bg-card">
+                  <Tabs 
+                    value={currentFile?.id || projectFiles[0]?.id} 
+                    onValueChange={(fileId) => {
+                      const file = projectFiles.find(f => f.id === fileId);
+                      if (file) handleFileSelect(file);
+                    }}
+                  >
+                    <TabsList className="w-full justify-start rounded-none h-10 bg-transparent">
+                      {projectFiles.map((file) => (
+                        <TabsTrigger 
+                          key={file.id} 
+                          value={file.id}
+                          className="data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          {file.file_path.split('/').pop()}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                </div>
+              )}
+              
+              {/* Monaco Editor */}
+              <div className="flex-1">
+                {currentFile ? (
+                  <CodeEditor
+                    code={currentFile.file_content}
+                    onChange={handleCodeChange}
+                    language={currentFile.file_type === 'typescript' ? 'typescript' : 'javascript'}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">Seleziona un file per iniziare a modificare</p>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

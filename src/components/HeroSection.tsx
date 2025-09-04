@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { Paperclip, Sparkles, FolderOpen, Calendar } from "lucide-react";
+import { Paperclip, Sparkles, FolderOpen, Calendar, Trash2 } from "lucide-react";
 import { useAuth } from "@/integrations/supabase/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,9 +14,10 @@ import { it } from "date-fns/locale";
 interface Project {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   messages_used: number;
   updated_at: string;
+  status: 'active' | 'archived' | 'deleted';
 }
 
 const HeroSection = () => {
@@ -51,6 +52,31 @@ const HeroSection = () => {
       setRecentProjects((data as any) || []);
     } catch (error) {
       console.error('Error fetching recent projects:', error);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: 'archived' })
+        .eq('id', projectId)
+        .eq('owner_id', user?.id);
+
+      if (error) throw error;
+
+      setRecentProjects(recentProjects.filter(p => p.id !== projectId));
+      toast({
+        title: "Progetto eliminato",
+        description: "Il progetto è stato spostato nel cestino",
+      });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile eliminare il progetto",
+      });
     }
   };
 
@@ -235,45 +261,58 @@ const HeroSection = () => {
           </div>
         </div>
 
-        {/* Recent Projects for Logged-in Users */}
+        {/* All Projects for Logged-in Users */}
         {user && recentProjects.length > 0 && (
-          <div className="max-w-4xl mx-auto mb-16">
+          <div className="max-w-6xl mx-auto mb-16">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground">I tuoi progetti recenti</h2>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/dashboard')}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <FolderOpen className="w-4 h-4 mr-2" />
-                Vedi tutti
-              </Button>
+              <h2 className="text-xl font-semibold text-foreground">I tuoi progetti</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentProjects.map((project) => (
                 <Card 
                   key={project.id}
-                  className="bg-card/50 border-border hover:bg-card/80 transition-all duration-300 cursor-pointer"
+                  className="bg-card border-border hover:shadow-lg transition-all duration-300 cursor-pointer group"
                   onClick={() => navigate(`/editor/${project.id}`)}
                 >
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-foreground line-clamp-1">
-                      {project.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        {formatDistanceToNow(new Date(project.updated_at), { 
-                          addSuffix: true,
-                          locale: it 
-                        })}
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                          {project.name}
+                        </CardTitle>
+                        {project.description && (
+                          <CardDescription className="mt-2 line-clamp-2">
+                            {project.description}
+                          </CardDescription>
+                        )}
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {project.messages_used}
-                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          {formatDistanceToNow(new Date(project.updated_at), { 
+                            addSuffix: true,
+                            locale: it 
+                          })}
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {project.messages_used} messaggi
+                        </Badge>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
