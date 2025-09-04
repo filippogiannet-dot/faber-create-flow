@@ -1,5 +1,6 @@
 import { SandpackProvider, SandpackPreview, SandpackLayout, SandpackConsole } from "@codesandbox/sandpack-react";
 import { useEffect, useMemo, useState } from "react";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 interface FileData {
   path: string;
@@ -31,26 +32,81 @@ export default function LivePreview({ files }: LivePreviewProps) {
     const defaultAppTsx = `import React from 'react';
 export default function App() {
   return (
-    <div className="min-h-screen grid place-items-center bg-black text-white">
-      <div className="text-center space-y-4">
-        <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-        <h1 className="text-xl font-semibold">Preview in caricamento…</h1>
-        <p className="text-sm opacity-70">L'AI sta preparando l'app e i componenti UI</p>
+    <div className="min-h-screen grid place-items-center bg-background text-foreground">
+      <div className="text-center space-y-4 p-8">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+        <h1 className="text-2xl font-semibold">Preview in caricamento…</h1>
+        <p className="text-muted-foreground">L'AI sta preparando l'app e i componenti UI</p>
       </div>
     </div>
   );
 }`;
 
+    const errorBoundaryCode = `import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+interface Props {
+  children: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <div className="bg-card border border-border rounded-lg p-8 max-w-md w-full text-center">
+            <div className="text-destructive text-6xl mb-4">⚠️</div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              Qualcosa è andato storto
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              Si è verificato un errore durante il rendering.
+            </p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: undefined })}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 py-2 px-4 rounded-md transition-colors"
+            >
+              Riprova
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}`;
+
     const ensureMain = (appImportPath: string) => `import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { ErrorBoundary } from './ErrorBoundary'
 import App from '${appImportPath}'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 )`;
 
@@ -74,6 +130,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     if (!mapped['/index.html']) {
       mapped['/index.html'] = { code: defaultIndexHtml };
     }
+
+    // Always inject ErrorBoundary
+    mapped['/src/ErrorBoundary.tsx'] = { code: errorBoundaryCode };
 
     // Detect App path and ensure main.tsx wraps with BrowserRouter
     const hasSrcApp = Boolean(mapped['/src/App.tsx']);
@@ -103,23 +162,39 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   }), []);
 
   return (
-    <div className="h-full w-full">
-      <SandpackProvider
-        template="react-ts"
-        theme="dark"
-        files={sandpackFiles}
-        customSetup={{
-          dependencies,
-        }}
-      >
-        <SandpackLayout style={{ height: "100%" }}>
-          {/* Preview only by default; code editor is handled by Monaco outside */}
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <SandpackPreview style={{ height: "100%" }} showNavigator />
-          </div>
-        </SandpackLayout>
-        <SandpackConsole style={{ height: 180 }} />
-      </SandpackProvider>
+    <div className="h-full w-full bg-background">
+      <ErrorBoundary>
+        <SandpackProvider
+          template="react-ts"
+          theme="dark"
+          files={sandpackFiles}
+          customSetup={{
+            dependencies,
+          }}
+          options={{
+            autorun: true,
+            autoReload: true,
+            recompileMode: "immediate",
+            recompileDelay: 300
+          }}
+        >
+          <SandpackLayout style={{ height: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
+            {/* Preview only - full height */}
+            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <SandpackPreview 
+                style={{ 
+                  height: "100%", 
+                  backgroundColor: "hsl(0 0% 0%)",
+                  border: "1px solid hsl(222 43% 15%)"
+                }} 
+                showNavigator={false}
+                showRefreshButton={true}
+                showOpenInCodeSandbox={false}
+              />
+            </div>
+          </SandpackLayout>
+        </SandpackProvider>
+      </ErrorBoundary>
     </div>
   );
 }
