@@ -37,15 +37,17 @@ serve(async (req) => {
 }
 
 Strong rules:
-- Use React 18 function components with hooks
-- Use Tailwind CSS utility classes; include <script src=\"https://cdn.tailwindcss.com\"></script> in /index.html
-- Prefer UI components from @rewind-ui/core; fallback to keep-react only if necessary
-- Use react-router-dom v6 when routing is required (BrowserRouter + Routes)
-- Place runtime code under /src (App.tsx, main.tsx, components)
-- Ensure imports are valid and render actual components (no placeholders)
-- Keep code compilable (TS strict) and responsive
-- Do not include explanations or backticks, return JSON only`;
-
+- Build a working Vite-like React 18 + TS app with Tailwind and react-router-dom v6.
+- /index.html MUST include <script src=\"https://cdn.tailwindcss.com\"></script> and a <div id=\"root\"></div>.
+- /src/main.tsx MUST render BrowserRouter + App (Routes inside App).
+- /src/App.tsx MUST:
+  - Use a full-screen responsive layout (min-h-screen, flex, fills viewport).
+  - Include a basic shell (header/nav + main content) and at least one route.
+  - Render real UI using @rewind-ui/core (preferred) or keep-react (fallback). DO NOT use shadcn or Next.js.
+- All imports must be relative (e.g. "./components/Header") – DO NOT use path aliases like "@/...".
+- Place components under /src/components and use JSX with valid imports (no placeholders).
+- Keep code compilable (TS strict), responsive, and avoid server-only APIs.
+- Do not include explanations or backticks; return JSON only.`;
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {

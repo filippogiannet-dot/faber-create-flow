@@ -155,6 +155,54 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     // Always inject ErrorBoundary
     mapped['/src/ErrorBoundary.tsx'] = { code: errorBoundaryCode };
 
+    // Inject basic UI fallbacks (shadcn-like) only if missing, so imports like "@/components/ui/button" won't break
+    const ensureFallback = (p: string, code: string) => {
+      if (!mapped[p]) mapped[p] = { code };
+    };
+
+    ensureFallback('/src/components/ui/button.tsx', `import React from 'react';
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> { variant?: 'default' | 'outline' | 'ghost'; }
+export const Button = ({ className = '', variant = 'default', ...props }: ButtonProps) => {
+  const base = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 h-10 px-4 py-2';
+  const variants: Record<string, string> = {
+    default: 'bg-blue-600 text-white hover:bg-blue-700',
+    outline: 'border border-gray-300 text-gray-100 hover:bg-gray-800',
+    ghost: 'text-gray-100 hover:bg-gray-800',
+  };
+  const cls = base + ' ' + (variants[variant] || variants.default) + ' ' + className;
+  return <button className={cls} {...props} />;
+};
+export default Button;`);
+
+    ensureFallback('/src/components/ui/card.tsx', `import React from 'react';
+export const Card = ({ className = '', children }: React.PropsWithChildren<{ className?: string }>) => (
+  <div className={'rounded-lg border border-gray-800 bg-gray-900 p-6 ' + className}>{children}</div>
+);
+export const CardHeader = ({ className = '', children }: any) => (<div className={'mb-4 ' + className}>{children}</div>);
+export const CardTitle = ({ className = '', children }: any) => (<h3 className={'text-lg font-semibold text-white ' + className}>{children}</h3>);
+export const CardContent = ({ className = '', children }: any) => (<div className={className}>{children}</div>);
+export default Card;`);
+
+    ensureFallback('/src/components/ui/input.tsx', `import React from 'react';
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+export const Input = ({ className = '', ...props }: InputProps) => (
+  <input className={'w-full rounded-md border border-gray-700 bg-black text-white px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ' + className} {...props} />
+);
+export default Input;`);
+
+    ensureFallback('/src/components/ui/textarea.tsx', `import React from 'react';
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export const Textarea = ({ className = '', ...props }: TextareaProps) => (
+  <textarea className={'w-full rounded-md border border-gray-700 bg-black text-white px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ' + className} {...props} />
+);
+export default Textarea;`);
+
+    ensureFallback('/src/components/ui/badge.tsx', `import React from 'react';
+export const Badge = ({ className = '', children }: React.PropsWithChildren<{ className?: string }>) => (
+  <span className={'inline-flex items-center rounded-full border border-gray-700 bg-gray-800 px-2 py-0.5 text-xs text-gray-200 ' + className}>{children}</span>
+);
+export default Badge;`);
+
     // Detect App path case-insensitively and ensure main.tsx wraps with BrowserRouter
     const appKey = Object.keys(mapped).find(
       (k) => k.toLowerCase() === '/src/app.tsx' || k.toLowerCase() === '/app.tsx'
@@ -217,6 +265,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 showNavigator={false}
                 showRefreshButton={false}
                 showOpenInCodeSandbox={false}
+              />
+              <SandpackConsole
+                standalone={false}
+                showHeader={false}
+                resetOnPreviewRestart
+                style={{ height: 200, backgroundColor: "hsl(0 0% 5%)", borderTop: "1px solid hsl(0 0% 15%)" }}
               />
             </div>
           </SandpackLayout>

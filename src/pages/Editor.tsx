@@ -46,8 +46,15 @@ export default function Editor() {
     localStorage.setItem(`chat-messages-${projectId}`, JSON.stringify(chatMessages));
   }, [chatMessages, projectId]);
 
+  const genId = (() => {
+    let c = 0;
+    return () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${c++}-${Math.random().toString(36).slice(2, 8)}`;
+  })();
+
   const addChatMessage = (text: string, type: 'user' | 'assistant' | 'status' = 'status') => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const id = genId();
     const message: ChatMessage = {
       id,
       text,
@@ -106,13 +113,26 @@ export default function Editor() {
       if (data?.files && Array.isArray(data.files)) {
         updateChatMessage(genId, isInitialRun ? "✅ Componenti generati" : "✅ Modifiche applicate");
         const previewId = addChatMessage("🎨 Aggiorno la preview...", 'status');
-        
-        setGeneratedFiles(data.files);
+
+        if (isInitialRun || generatedFiles.length === 0) {
+          setGeneratedFiles(data.files);
+        } else {
+          // Merge by path: overwrite changed paths, keep others
+          setGeneratedFiles((prev) => {
+            const incomingMap = new Map<string, string>(data.files.map((f: any) => [f.path, f.content]));
+            const next = prev.map((f) => incomingMap.has(f.path) ? { path: f.path, content: incomingMap.get(f.path)! } : f);
+            // add new files not present before
+            data.files.forEach((f: any) => {
+              if (!prev.some((p) => p.path === f.path)) next.push({ path: f.path, content: f.content });
+            });
+            return next;
+          });
+        }
         setCurrentView("preview");
-        
+
         await new Promise(resolve => setTimeout(resolve, 200));
         updateChatMessage(previewId, isInitialRun ? "🚀 Preview aggiornata con successo!" : "🔄 Preview aggiornata.");
-        
+
         if (isInitialRun) {
           addChatMessage("App generata con successo! Ora puoi visualizzarla nella preview.", 'assistant');
           setHasGeneratedOnce(true);
@@ -304,17 +324,7 @@ export default function Editor() {
                     </div>
                   }
                 >
-                  {isGenerating ? (
-                    <div className="h-full flex items-center justify-center bg-black">
-                      <div className="text-center">
-                        <Loader2 className="h-12 w-12 text-blue-400 mx-auto mb-4 animate-spin" />
-                        <h3 className="text-xl font-semibold text-white mb-2">Generando l'app...</h3>
-                        <p className="text-gray-400">L'AI sta creando la tua applicazione</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <LivePreview files={generatedFiles} />
-                  )}
+                  <LivePreview files={generatedFiles} />
                 </ErrorBoundary>
               </div>
             ) : (
