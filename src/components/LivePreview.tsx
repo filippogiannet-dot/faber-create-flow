@@ -30,13 +30,14 @@ export default function LivePreview({ files }: LivePreviewProps) {
 </html>`;
 
     const defaultAppTsx = `import React from 'react';
+
 export default function App() {
   return (
-    <div className="min-h-screen grid place-items-center bg-background text-foreground">
+    <div className="min-h-screen grid place-items-center bg-gray-900 text-white">
       <div className="text-center space-y-4 p-8">
-        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto" />
         <h1 className="text-2xl font-semibold">Preview in caricamento…</h1>
-        <p className="text-muted-foreground">L'AI sta preparando l'app e i componenti UI</p>
+        <p className="text-gray-400">L'AI sta preparando l'app e i componenti UI</p>
       </div>
     </div>
   );
@@ -100,12 +101,19 @@ import { BrowserRouter } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
 import App from '${appImportPath}'
 
+// Prevent Router context conflicts by creating isolated routing context
+function IsolatedApp() {
+  return (
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <IsolatedApp />
     </ErrorBoundary>
   </React.StrictMode>
 )`;
