@@ -1,44 +1,61 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle } from "lucide-react";
+import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import LivePreview from "@/components/LivePreview";
 import CodeEditor from "@/components/CodeEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { StatusMessages, StatusMessage } from "@/components/StatusMessages";
+
+interface ChatMessage {
+  id: string;
+  text: string;
+  type: 'user' | 'assistant' | 'status';
+  timestamp: Date;
+}
 
 export default function Editor() {
   const { projectId } = useParams();
-  const [prompt, setPrompt] = useState(() => {
-    // Try to load the last prompt from localStorage
-    return localStorage.getItem(`editor-prompt-${projectId}`) || "";
-  });
+  const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState<Array<{ path: string; content: string }>>([]);
   const [currentView, setCurrentView] = useState<"preview" | "code">("preview");
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [fileContent, setFileContent] = useState<string>("");
-  const [statusMessages, setStatusMessages] = useState<StatusMessage[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
+    // Load chat history from localStorage
+    const saved = localStorage.getItem(`chat-messages-${projectId}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const addStatusMessage = (text: string, type: 'loading' | 'success' | 'error' = 'loading') => {
-    const message: StatusMessage = {
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  // Save chat messages to localStorage
+  useEffect(() => {
+    localStorage.setItem(`chat-messages-${projectId}`, JSON.stringify(chatMessages));
+  }, [chatMessages, projectId]);
+
+  const addChatMessage = (text: string, type: 'user' | 'assistant' | 'status' = 'status') => {
+    const message: ChatMessage = {
       id: Date.now().toString(),
       text,
       type,
       timestamp: new Date()
     };
-    setStatusMessages(prev => [...prev, message]);
+    setChatMessages(prev => [...prev, message]);
     return message.id;
   };
 
-  const updateStatusMessage = (id: string, text: string, type: 'loading' | 'success' | 'error') => {
-    setStatusMessages(prev => prev.map(msg => 
-      msg.id === id ? { ...msg, text, type } : msg
+  const updateChatMessage = (id: string, text: string) => {
+    setChatMessages(prev => prev.map(msg => 
+      msg.id === id ? { ...msg, text } : msg
     ));
   };
 
@@ -46,39 +63,44 @@ export default function Editor() {
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
-    setStatusMessages([]);
     
-    // Save the prompt to localStorage
-    localStorage.setItem(`editor-prompt-${projectId}`, prompt);
+    // Add user message to chat
+    addChatMessage(prompt, 'user');
+    const userPrompt = prompt;
+    
+    // Clear the prompt input
+    setPrompt("");
 
     try {
-      const initId = addStatusMessage("Inizializzo la generazione...", 'loading');
+      const initId = addChatMessage("🔄 Inizializzo la generazione...", 'status');
       
       await new Promise(resolve => setTimeout(resolve, 500));
-      updateStatusMessage(initId, "Inizializzazione completata", 'success');
+      updateChatMessage(initId, "✅ Inizializzazione completata");
       
-      const parseId = addStatusMessage("Analizzo il prompt...", 'loading');
+      const parseId = addChatMessage("🔍 Analizzo il prompt...", 'status');
       
       const { data, error } = await supabase.functions.invoke("generate", {
-        body: { prompt },
+        body: { prompt: userPrompt },
       });
 
       if (error) throw error;
 
-      updateStatusMessage(parseId, "Prompt analizzato", 'success');
-      const genId = addStatusMessage("Genero i componenti...", 'loading');
+      updateChatMessage(parseId, "✅ Prompt analizzato");
+      const genId = addChatMessage("⚡ Genero i componenti...", 'status');
       
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (data?.files && Array.isArray(data.files)) {
-        updateStatusMessage(genId, "Componenti generati", 'success');
-        const previewId = addStatusMessage("Aggiorno la preview...", 'loading');
+        updateChatMessage(genId, "✅ Componenti generati");
+        const previewId = addChatMessage("🎨 Aggiorno la preview...", 'status');
         
         setGeneratedFiles(data.files);
         setCurrentView("preview");
         
         await new Promise(resolve => setTimeout(resolve, 300));
-        updateStatusMessage(previewId, "Preview aggiornata con successo!", 'success');
+        updateChatMessage(previewId, "🚀 Preview aggiornata con successo!");
+        
+        addChatMessage("App generata con successo! Ora puoi visualizzarla nella preview.", 'assistant');
         
         toast({
           title: "App generata!",
@@ -89,7 +111,7 @@ export default function Editor() {
       }
     } catch (error) {
       console.error("Errore durante la generazione:", error);
-      addStatusMessage("Errore durante la generazione", 'error');
+      addChatMessage("❌ Errore durante la generazione dell'app", 'status');
       toast({
         variant: "destructive",
         title: "Errore",
@@ -100,48 +122,90 @@ export default function Editor() {
     }
   };
 
+  const MessageIcon = ({ type }: { type: ChatMessage['type'] }) => {
+    switch (type) {
+      case 'user':
+        return <User className="h-4 w-4 text-primary" />;
+      case 'assistant':
+        return <Bot className="h-4 w-4 text-green-500" />;
+      default:
+        return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />;
+    }
+  };
+
   return (
     <ErrorBoundary>
-      <div className="h-screen bg-background flex overflow-hidden">
-        {/* Chat Panel - Fixed Width 1/4 */}
-        <div className="w-1/4 min-w-[300px] bg-background border-r border-border flex flex-col">
-          <div className="p-4 border-b border-border bg-card">
+      <div className="h-screen w-screen bg-black flex overflow-hidden">
+        {/* Chat Panel - 30% */}
+        <div className="flex-none w-[30%] bg-black border-r border-gray-800 flex flex-col">
+          <div className="p-4 border-b border-gray-800 bg-gray-900">
             <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Chat Editor</h2>
-              <Badge variant="secondary" className="text-xs">AI</Badge>
+              <MessageSquare className="h-5 w-5 text-white" />
+              <h2 className="font-semibold text-white">Chat Editor</h2>
+              <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-200">AI</Badge>
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-gray-400">
               Genera la tua app con un prompt
             </div>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 p-4 overflow-y-auto">
-            <div className="space-y-4">
-              <div className="text-sm text-muted-foreground mb-4">
-                Descrivi l'applicazione che vuoi creare...
-              </div>
+          <div className="flex-1 p-4 overflow-y-auto bg-black">
+            <div className="space-y-3">
+              {chatMessages.length === 0 && (
+                <div className="text-sm text-gray-400 mb-4">
+                  Descrivi l'applicazione che vuoi creare...
+                </div>
+              )}
               
-              {/* Status Messages */}
-              <StatusMessages messages={statusMessages} />
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex items-start gap-3 p-3 rounded-lg ${
+                    message.type === 'user' 
+                      ? 'bg-blue-900/30 border border-blue-700/50' 
+                      : message.type === 'assistant'
+                      ? 'bg-green-900/30 border border-green-700/50'
+                      : 'bg-gray-800/50 border border-gray-700/50'
+                  }`}
+                >
+                  <div className="flex-shrink-0 mt-0.5">
+                    <MessageIcon type={message.type} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white break-words">
+                      {message.text}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {message.timestamp.toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
             </div>
           </div>
 
           {/* Input Area */}
-          <div className="p-4 border-t border-border bg-card">
+          <div className="p-4 border-t border-gray-800 bg-gray-900">
             <div className="space-y-3">
               <Textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Scrivi il tuo prompt qui..."
-                className="min-h-[100px] resize-none bg-background border-border text-foreground placeholder:text-muted-foreground"
+                className="min-h-[100px] resize-none bg-black border-gray-700 text-white placeholder:text-gray-400"
                 disabled={isGenerating}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleGenerate();
+                  }
+                }}
               />
               <Button
                 onClick={handleGenerate}
                 disabled={isGenerating || !prompt.trim()}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {isGenerating ? (
                   <>
@@ -159,23 +223,26 @@ export default function Editor() {
           </div>
         </div>
 
-        {/* Preview Panel - Fixed Width 3/4 */}
-        <div className="w-3/4 flex flex-col bg-background">
+        {/* Preview Panel - 70% */}
+        <div className="flex-none w-[70%] flex flex-col bg-black">
           {/* Header with toggle */}
-          <div className="p-4 border-b border-border bg-card">
+          <div className="p-4 border-b border-gray-800 bg-gray-900">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Monitor className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">
-                  {currentView === "preview" ? "Live Preview" : "Code Editor"}
+                <Monitor className="h-5 w-5 text-white" />
+                <h3 className="font-semibold text-white">
+                  {currentView === "preview" ? "Live Preview" : "Code Tree"}
                 </h3>
+                {isGenerating && (
+                  <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />
+                )}
               </div>
-              <div className="flex gap-1 bg-muted p-1 rounded-lg">
+              <div className="flex gap-1 bg-gray-800 p-1 rounded-lg">
                 <Button
                   variant={currentView === "preview" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setCurrentView("preview")}
-                  className="h-8 px-3"
+                  className="h-8 px-3 bg-gray-700 hover:bg-gray-600 text-white"
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   Preview
@@ -184,10 +251,10 @@ export default function Editor() {
                   variant={currentView === "code" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setCurrentView("code")}
-                  className="h-8 px-3"
+                  className="h-8 px-3 bg-gray-700 hover:bg-gray-600 text-white"
                 >
                   <Code className="h-4 w-4 mr-1" />
-                  Code
+                  Code Tree
                 </Button>
               </div>
             </div>
@@ -196,36 +263,46 @@ export default function Editor() {
           {/* Content Area - Full Height */}
           <div className="flex-1 flex overflow-hidden">
             {currentView === "preview" ? (
-              <div className="flex-1 bg-background">
+              <div className="flex-1 bg-black">
                 <ErrorBoundary
                   fallback={
-                    <div className="h-full flex items-center justify-center bg-card/50">
+                    <div className="h-full flex items-center justify-center bg-gray-900/50">
                       <div className="text-center p-8">
-                        <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">Errore nella Preview</h3>
-                        <p className="text-muted-foreground mb-4">
+                        <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2 text-white">Errore nella Preview</h3>
+                        <p className="text-gray-400 mb-4">
                           Si è verificato un errore durante il rendering dell'applicazione.
                         </p>
-                        <Button onClick={() => window.location.reload()} variant="outline">
+                        <Button onClick={() => window.location.reload()} variant="outline" className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700">
                           Ricarica
                         </Button>
                       </div>
                     </div>
                   }
                 >
-                  <LivePreview files={generatedFiles} />
+                  {isGenerating ? (
+                    <div className="h-full flex items-center justify-center bg-black">
+                      <div className="text-center">
+                        <Loader2 className="h-12 w-12 text-blue-400 mx-auto mb-4 animate-spin" />
+                        <h3 className="text-xl font-semibold text-white mb-2">Generando l'app...</h3>
+                        <p className="text-gray-400">L'AI sta creando la tua applicazione</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <LivePreview files={generatedFiles} />
+                  )}
                 </ErrorBoundary>
               </div>
             ) : (
               <div className="flex flex-1 overflow-hidden">
                 {/* File Tree */}
-                <div className="w-64 bg-card border-r border-border flex flex-col">
-                  <div className="p-3 border-b border-border">
-                    <h4 className="font-medium text-sm text-foreground">File del Progetto</h4>
+                <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+                  <div className="p-3 border-b border-gray-800">
+                    <h4 className="font-medium text-sm text-white">File del Progetto</h4>
                   </div>
                   <div className="flex-1 p-2 overflow-y-auto">
                     {generatedFiles.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-2">Nessun file generato</p>
+                      <p className="text-sm text-gray-400 p-2">Nessun file generato</p>
                     ) : (
                       <div className="space-y-1">
                         {generatedFiles.map((file) => (
@@ -235,8 +312,8 @@ export default function Editor() {
                               setSelectedFile(file.path);
                               setFileContent(file.content);
                             }}
-                            className={`w-full text-left text-sm p-2 rounded hover:bg-muted transition-colors ${
-                              selectedFile === file.path ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
+                            className={`w-full text-left text-sm p-2 rounded hover:bg-gray-700 transition-colors ${
+                              selectedFile === file.path ? "bg-gray-700 text-white font-medium" : "text-gray-300"
                             }`}
                           >
                             {file.path}
@@ -252,11 +329,11 @@ export default function Editor() {
                   {selectedFile ? (
                     <ErrorBoundary
                       fallback={
-                        <div className="h-full flex items-center justify-center bg-card/50">
+                        <div className="h-full flex items-center justify-center bg-gray-900/50">
                           <div className="text-center p-8">
-                            <Code className="h-12 w-12 text-destructive mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">Errore nell'Editor</h3>
-                            <p className="text-muted-foreground">
+                            <Code className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold mb-2 text-white">Errore nell'Editor</h3>
+                            <p className="text-gray-400">
                               Si è verificato un errore durante il caricamento dell'editor.
                             </p>
                           </div>
@@ -280,7 +357,7 @@ export default function Editor() {
                       />
                     </ErrorBoundary>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground bg-card/30">
+                    <div className="flex items-center justify-center h-full text-gray-400 bg-black">
                       <div className="text-center">
                         <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>Seleziona un file per visualizzare il codice</p>
