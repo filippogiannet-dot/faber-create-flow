@@ -67,7 +67,9 @@ serve(async (req) => {
       'zod', '@hookform/resolvers', 'framer-motion', 'lucide-react',
       '@radix-ui/', '@mui/', '@mantine/', '@chakra-ui/', '@headlessui/react',
       'tailwindcss', 'class-variance-authority', 'tailwind-merge', 'date-fns', 'uuid',
-      'recharts'
+      'recharts', '@headlessui/react', '@heroicons/react', 'react-icons', 'react-toastify',
+      'react-modal', 'react-tabs', 'react-table', 'react-select', 'react-beautiful-dnd',
+      'chart.js', 'react-chartjs-2', 'axios', 'dayjs', 'clsx', 'react-copy-to-clipboard'
     ];
 
     for (const file of files) {

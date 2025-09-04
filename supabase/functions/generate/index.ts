@@ -34,11 +34,15 @@ CRITICAL: Output ONLY strict JSON in this format:
   "files": [
     {
       "path": "/index.html",
-      "content": "<!DOCTYPE html>\\n<html lang=\\"en\\">\\n<head>\\n  <meta charset=\\"UTF-8\\" />\\n  <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\" />\\n  <title>App Name</title>\\n  <script src=\\"https://cdn.tailwindcss.com\\"></script>\\n</head>\\n<body>\\n  <div id=\\"root\\"></div>\\n</body>\\n</html>"
+      "content": "<!DOCTYPE html>\\n<html lang=\\"en\\">\\n<head>\\n  <meta charset=\\"UTF-8\\" />\\n  <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\" />\\n  <title>App Name</title>\\n</head>\\n<body>\\n  <div id=\\"root\\"></div>\\n</body>\\n</html>"
     },
     {
       "path": "/src/main.tsx",
-      "content": "import React from 'react';\\nimport ReactDOM from 'react-dom/client';\\nimport { BrowserRouter } from 'react-router-dom';\\nimport App from './App';\\n\\nReactDOM.createRoot(document.getElementById('root')!).render(\\n  <React.StrictMode>\\n    <BrowserRouter>\\n      <App />\\n    </BrowserRouter>\\n  </React.StrictMode>\\n);"
+      "content": "import React from 'react';\\nimport ReactDOM from 'react-dom/client';\\nimport { BrowserRouter } from 'react-router-dom';\\nimport App from './App';\\nimport './index.css';\\nimport 'react-toastify/dist/ReactToastify.css';\\n\\nReactDOM.createRoot(document.getElementById('root')!).render(\\n  <React.StrictMode>\\n    <BrowserRouter>\\n      <App />\\n    </BrowserRouter>\\n  </React.StrictMode>\\n);"
+    },
+    {
+      "path": "/src/index.css",
+      "content": "@tailwind base;\\n@tailwind components;\\n@tailwind utilities;\\n\\n:root {\\n  --primary: 217 91% 60%;\\n  --secondary: 210 40% 98%;\\n  --background: 0 0% 100%;\\n  --foreground: 222.2 84% 4.9%;\\n  --muted: 210 40% 96%;\\n}\\n\\nbody {\\n  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\\n  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\\n  min-height: 100vh;\\n}"
     },
     {
       "path": "/src/App.tsx", 
@@ -47,28 +51,44 @@ CRITICAL: Output ONLY strict JSON in this format:
   ]
 }
 
+UI LIBRARY REQUIREMENTS:
+- Use @headlessui/react for interactive components (modals, dropdowns, tabs)
+- Use @heroicons/react for icons throughout the interface  
+- Use recharts for all charts and data visualization
+- Use react-toastify for notifications
+- Use framer-motion for animations and transitions
+- Use react-beautiful-dnd for drag and drop functionality
+- Use react-table for data tables with sorting/filtering
+- Use react-select for enhanced dropdowns
+- Use react-modal for modal dialogs
+- Import all CSS libraries: 'react-toastify/dist/ReactToastify.css'
+
 MANDATORY REQUIREMENTS:
 1. Generate COMPLETE applications that match the user's exact request (CRM, dashboard, todo app, etc.)
-2. Include 4-6 meaningful routes with full navigation
+2. Include 4-6 meaningful routes with full navigation using @headlessui/react navigation components
 3. Use realistic business data and content (not placeholders or "Lorem ipsum")  
 4. Create ALL necessary component files - never reference missing components
-5. Use Lucide icons throughout the interface
-6. Create responsive layouts with Tailwind classes
+5. Use @heroicons/react icons throughout the interface instead of lucide-react
+6. Create responsive layouts with Tailwind classes and beautiful gradients
 7. Include proper TypeScript interfaces for all data
-8. Add loading states, error handling, and empty states
+8. Add loading states, error handling, and empty states using @headlessui/react
 9. Generate 8-12 component files for a complete application
+10. Use recharts for all charts with proper responsive containers
+11. Include ToastContainer in App.tsx for notifications
+12. Use framer-motion for page transitions and micro-interactions
 
 NEVER GENERATE:
 - "Hello World" applications
 - Placeholder content or Lorem ipsum
 - Broken imports or missing components
 - Basic templates without real functionality
+- Apps without proper CSS imports
 
 EXAMPLE DOMAIN MAPPING:
-- CRM → Customer management, deals pipeline, contact forms, reports dashboard
-- E-commerce → Product catalog, shopping cart, checkout, order management  
-- Dashboard → Analytics charts, user management, settings, notifications
-- Todo App → Task creation, categories, priority levels, completion tracking
+- CRM → Customer management, deals pipeline, contact forms, reports dashboard with recharts
+- E-commerce → Product catalog, shopping cart, checkout, order management with react-table  
+- Dashboard → Analytics charts with recharts, user management, settings, notifications with react-toastify
+- Todo App → Task creation with react-select, categories, priority levels, completion tracking with react-beautiful-dnd
 
 Return ONLY JSON, no explanations.`;
 
