@@ -27,27 +27,37 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert React + TypeScript generator. Output ONLY strict JSON (no prose, no code fences), in this exact shape:
+    const systemPrompt = `You are an expert React + TypeScript generator. Create complete, functional applications.
+
+Output ONLY strict JSON in this exact shape:
 {
   "files": [
     { "path": "/index.html", "content": "..." },
     { "path": "/src/main.tsx", "content": "..." },
-    { "path": "/src/App.tsx", "content": "..." }
+    { "path": "/src/App.tsx", "content": "..." },
+    { "path": "/src/components/ComponentName.tsx", "content": "..." }
   ]
 }
 
-Strong rules:
-- Build a working Vite-like React 18 + TS app with Tailwind and react-router-dom v6.
-- /index.html MUST include <script src=\"https://cdn.tailwindcss.com\"></script> and a <div id=\"root\"></div>.
-- /src/main.tsx MUST render BrowserRouter + App (Routes inside App).
-- /src/App.tsx MUST:
-  - Use a full-screen responsive layout (min-h-screen, flex, fills viewport).
-  - Include a basic shell (header/nav + main content) and at least one route.
-  - Render real UI using @rewind-ui/core (preferred) or keep-react (fallback). DO NOT use shadcn or Next.js.
-- All imports must be relative (e.g. "./components/Header") – DO NOT use path aliases like "@/...".
-- Place components under /src/components and use JSX with valid imports (no placeholders).
-- Keep code compilable (TS strict), responsive, and avoid server-only APIs.
-- Do not include explanations or backticks; return JSON only.`;
+CRITICAL RULES:
+- Generate COMPLETE, FUNCTIONAL applications based on user prompt
+- Build modern React 18 + TypeScript + Tailwind apps with react-router-dom v6
+- /index.html MUST include <script src="https://cdn.tailwindcss.com"></script> and <div id="root"></div>
+- /src/main.tsx MUST render BrowserRouter wrapping App component
+- /src/App.tsx MUST be a complete application with:
+  * Multiple routes and pages (at least 3-4 meaningful routes)
+  * Modern responsive UI with proper navigation
+  * State management using React hooks
+  * Form handling with validation
+  * Real functionality matching the user's request
+  * Professional styling with Tailwind
+- Generate all necessary components in /src/components/
+- Use semantic HTML and proper TypeScript interfaces
+- Include realistic data and content, not placeholders
+- All imports must be relative paths (./components/Header) - NO path aliases
+- Make it production-ready: error boundaries, loading states, proper UX
+- NEVER generate "Hello World" or basic templates - create full applications
+- Return only JSON, no explanations or code fences`;
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -55,13 +65,13 @@ Strong rules:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-2025-04-14',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.4,
-        max_tokens: 2200,
+        temperature: 0.3,
+        max_tokens: 4096,
       }),
     });
 
@@ -98,21 +108,37 @@ Strong rules:
 
     let parsedResponse = tryParseJson(raw);
 
-    // Build a safe default app if parsing failed
+    // Build a comprehensive default app if parsing failed
     if (!parsedResponse) {
       parsedResponse = {
         files: [
           {
             path: '/index.html',
-            content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n  <title>App</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>`
+            content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n  <title>Generated App</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n  <div id="root"></div>\n</body>\n</html>`
           },
           {
             path: '/src/App.tsx',
-            content: `import React from 'react';\nexport default function App() {\n  return (\n    <div className=\"min-h-screen grid place-items-center bg-black text-white\">\n      <div className=\"text-center space-y-4 p-8\">\n        <h1 className=\"text-2xl font-semibold\">Generation parsing failed</h1>\n        <p className=\"text-gray-400\">Ho caricato un'app di fallback per mantenere la preview attiva.</p>\n      </div>\n    </div>\n  );\n}`
+            content: `import React from 'react';\nimport { Routes, Route } from 'react-router-dom';\nimport Navigation from './components/Navigation';\nimport Home from './components/Home';\nimport About from './components/About';\nimport Contact from './components/Contact';\n\nexport default function App() {\n  return (\n    <div className="min-h-screen bg-gray-50">\n      <Navigation />\n      <main className="container mx-auto px-4 py-8">\n        <Routes>\n          <Route path="/" element={<Home />} />\n          <Route path="/about" element={<About />} />\n          <Route path="/contact" element={<Contact />} />\n        </Routes>\n      </main>\n    </div>\n  );\n}`
           },
           {
             path: '/src/main.tsx',
-            content: `import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>\n);`
+            content: `import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport { BrowserRouter } from 'react-router-dom';\nimport App from './App';\n\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <BrowserRouter>\n      <App />\n    </BrowserRouter>\n  </React.StrictMode>\n);`
+          },
+          {
+            path: '/src/components/Navigation.tsx',
+            content: `import React from 'react';\nimport { Link, useLocation } from 'react-router-dom';\n\nexport default function Navigation() {\n  const location = useLocation();\n  \n  return (\n    <nav className="bg-white shadow-lg">\n      <div className="container mx-auto px-4">\n        <div className="flex justify-between items-center py-4">\n          <Link to="/" className="text-2xl font-bold text-blue-600">MyApp</Link>\n          <div className="flex space-x-6">\n            <Link to="/" className={\`px-3 py-2 rounded-md transition-colors \${location.pathname === '/' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600'}\`}>Home</Link>\n            <Link to="/about" className={\`px-3 py-2 rounded-md transition-colors \${location.pathname === '/about' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600'}\`}>About</Link>\n            <Link to="/contact" className={\`px-3 py-2 rounded-md transition-colors \${location.pathname === '/contact' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-blue-600'}\`}>Contact</Link>\n          </div>\n        </div>\n      </div>\n    </nav>\n  );\n}`
+          },
+          {
+            path: '/src/components/Home.tsx',
+            content: `import React from 'react';\n\nexport default function Home() {\n  return (\n    <div className="text-center">\n      <h1 className="text-4xl font-bold text-gray-800 mb-6">Welcome to MyApp</h1>\n      <p className="text-xl text-gray-600 mb-8">A modern React application built with TypeScript and Tailwind CSS</p>\n      <div className="grid md:grid-cols-3 gap-8 mt-12">\n        <div className="bg-white p-6 rounded-lg shadow-md">\n          <h3 className="text-xl font-semibold mb-3">Fast</h3>\n          <p className="text-gray-600">Built with modern React and optimized for performance</p>\n        </div>\n        <div className="bg-white p-6 rounded-lg shadow-md">\n          <h3 className="text-xl font-semibold mb-3">Responsive</h3>\n          <p className="text-gray-600">Works beautifully on all devices and screen sizes</p>\n        </div>\n        <div className="bg-white p-6 rounded-lg shadow-md">\n          <h3 className="text-xl font-semibold mb-3">Modern</h3>\n          <p className="text-gray-600">Uses the latest web technologies and best practices</p>\n        </div>\n      </div>\n    </div>\n  );\n}`
+          },
+          {
+            path: '/src/components/About.tsx',
+            content: `import React from 'react';\n\nexport default function About() {\n  return (\n    <div className="max-w-4xl mx-auto">\n      <h1 className="text-4xl font-bold text-gray-800 mb-6">About Us</h1>\n      <div className="bg-white p-8 rounded-lg shadow-md">\n        <p className="text-lg text-gray-600 mb-6">\n          We are a team of passionate developers dedicated to creating amazing web applications.\n          Our mission is to build software that makes a difference in people's lives.\n        </p>\n        <div className="grid md:grid-cols-2 gap-8">\n          <div>\n            <h3 className="text-2xl font-semibold mb-4">Our Vision</h3>\n            <p className="text-gray-600">\n              To empower businesses and individuals with cutting-edge technology solutions\n              that drive innovation and growth.\n            </p>\n          </div>\n          <div>\n            <h3 className="text-2xl font-semibold mb-4">Our Values</h3>\n            <ul className="text-gray-600 space-y-2">\n              <li>• Innovation and creativity</li>\n              <li>• Quality and excellence</li>\n              <li>• Customer satisfaction</li>\n              <li>• Continuous learning</li>\n            </ul>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n}`
+          },
+          {
+            path: '/src/components/Contact.tsx',
+            content: `import React, { useState } from 'react';\n\nexport default function Contact() {\n  const [formData, setFormData] = useState({ name: '', email: '', message: '' });\n  const [submitted, setSubmitted] = useState(false);\n\n  const handleSubmit = (e: React.FormEvent) => {\n    e.preventDefault();\n    setSubmitted(true);\n    // Simulate form submission\n    setTimeout(() => setSubmitted(false), 3000);\n  };\n\n  return (\n    <div className="max-w-2xl mx-auto">\n      <h1 className="text-4xl font-bold text-gray-800 mb-6">Contact Us</h1>\n      {submitted ? (\n        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">\n          Thank you for your message! We'll get back to you soon.\n        </div>\n      ) : (\n        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md">\n          <div className="mb-6">\n            <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>\n            <input\n              type="text"\n              required\n              value={formData.name}\n              onChange={(e) => setFormData({...formData, name: e.target.value})}\n              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"\n            />\n          </div>\n          <div className="mb-6">\n            <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>\n            <input\n              type="email"\n              required\n              value={formData.email}\n              onChange={(e) => setFormData({...formData, email: e.target.value})}\n              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"\n            />\n          </div>\n          <div className="mb-6">\n            <label className="block text-gray-700 text-sm font-bold mb-2">Message</label>\n            <textarea\n              required\n              rows={4}\n              value={formData.message}\n              onChange={(e) => setFormData({...formData, message: e.target.value})}\n              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"\n            />\n          </div>\n          <button\n            type="submit"\n            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"\n          >\n            Send Message\n          </button>\n        </form>\n      )}\n    </div>\n  );\n}`
           }
         ]
       };

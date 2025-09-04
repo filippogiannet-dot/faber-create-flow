@@ -236,24 +236,27 @@ export default Badge;`);
     "lucide-react": "^0.462.0",
     clsx: "^2.1.1",
     tailwindcss: "^3.4.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
   }), []);
 
   return (
     <div className="h-full w-full bg-black">
       <ErrorBoundary>
         <SandpackProvider
-          key={Object.keys(sandpackFiles).join('|') + ':' + Object.values(sandpackFiles).reduce((s, f) => s + (f.code?.length || 0), 0)}
+          key={JSON.stringify(Object.keys(sandpackFiles).sort()) + ':' + Date.now()}
           template="react-ts"
           theme="dark"
           files={sandpackFiles}
           customSetup={{
             dependencies,
+            entry: "/src/index.tsx"
           }}
           options={{
             autorun: true,
             autoReload: true,
             recompileMode: "immediate",
-            recompileDelay: 300
+            recompileDelay: 100
           }}
         >
           <SandpackLayout style={{ height: "100vh", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
