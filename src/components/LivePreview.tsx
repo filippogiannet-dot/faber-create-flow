@@ -80,6 +80,26 @@ export default function LivePreview({ files, onValidationChange }: LivePreviewPr
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Live Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Inline Tailwind Base for immediate styling */
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+      :root {
+        --background: 0 0% 0%;
+        --foreground: 0 0% 100%;
+        --primary: 217 91% 80%;
+        --primary-foreground: 222 47% 8%;
+        --card: 222 43% 11%;
+        --card-foreground: 217 91% 95%;
+        --border: 222 43% 15%;
+        --radius: 0.75rem;
+      }
+      body { 
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        margin: 0;
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
@@ -152,9 +172,39 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }`;
 
+    const mainIndexCss = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 222 43% 11%;
+    --card-foreground: 217 91% 95%;
+    --primary: 217 91% 80%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 222 43% 15%;
+    --secondary-foreground: 217 91% 95%;
+    --border: 222 43% 15%;
+    --input: 222 43% 15%;
+    --ring: 217 91% 85%;
+    --radius: 0.75rem;
+  }
+  
+  * { @apply border-border; }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}`;
+
     const ensureMain = (appImportPath: string) => `import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import './index.css'
 import * as AppModule from '${appImportPath}'
 
 const ResolvedApp = (AppModule as any)?.default ?? (AppModule as any)?.App;
@@ -162,18 +212,18 @@ const ResolvedApp = (AppModule as any)?.default ?? (AppModule as any)?.App;
 function IsolatedApp() {
   if (!ResolvedApp) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'black', color: 'white' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-          <h2 style={{ fontSize: 18, marginBottom: 8 }}>App component not found</h2>
-          <p>Ensure you export a default component or a named export "App".</p>
+      <div className="min-h-screen grid place-items-center bg-gray-900 text-white">
+        <div className="text-center space-y-4 p-8">
+          <div className="text-6xl">⚠️</div>
+          <h2 className="text-xl font-semibold">App component not found</h2>
+          <p className="text-gray-400">Ensure you export a default component or named export "App".</p>
         </div>
       </div>
     );
   }
   const Comp = ResolvedApp as React.ComponentType;
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Comp />
     </BrowserRouter>
   );
@@ -207,6 +257,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       mapped['/index.html'] = { code: defaultIndexHtml };
     }
 
+    // Ensure index.css exists with Tailwind
+    if (!mapped['/src/index.css']) {
+      mapped['/src/index.css'] = { code: mainIndexCss };
+    }
+
     // Note: ErrorBoundary is handled at component level, not needed in sandbox
 
     // Inject basic UI fallbacks (shadcn-like) only if missing, so imports like "@/components/ui/button" won't break
@@ -214,48 +269,153 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       if (!mapped[p]) mapped[p] = { code };
     };
 
-    ensureFallback('/src/components/ui/button.tsx', `import React from 'react';
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> { variant?: 'default' | 'outline' | 'ghost'; }
-export const Button = ({ className = '', variant = 'default', ...props }: ButtonProps) => {
-  const base = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 h-10 px-4 py-2';
-  const variants: Record<string, string> = {
-    default: 'bg-blue-600 text-white hover:bg-blue-700',
-    outline: 'border border-gray-300 text-gray-100 hover:bg-gray-800',
-    ghost: 'text-gray-100 hover:bg-gray-800',
-  };
-  const cls = base + ' ' + (variants[variant] || variants.default) + ' ' + className;
-  return <button className={cls} {...props} />;
-};
-export default Button;`);
+    ensureFallback('/src/components/ui/button.tsx', `import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
 
-    ensureFallback('/src/components/ui/card.tsx', `import React from 'react';
-export const Card = ({ className = '', children }: React.PropsWithChildren<{ className?: string }>) => (
-  <div className={'rounded-lg border border-gray-800 bg-gray-900 p-6 ' + className}>{children}</div>
-);
-export const CardHeader = ({ className = '', children }: any) => (<div className={'mb-4 ' + className}>{children}</div>);
-export const CardTitle = ({ className = '', children }: any) => (<h3 className={'text-lg font-semibold text-white ' + className}>{children}</h3>);
-export const CardContent = ({ className = '', children }: any) => (<div className={className}>{children}</div>);
-export default Card;`);
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: { variant: "default", size: "default" },
+  }
+)
 
-    ensureFallback('/src/components/ui/input.tsx', `import React from 'react';
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+  }
+)
+Button.displayName = "Button"
+
+export { Button, buttonVariants }`);
+
+    ensureFallback('/src/components/ui/card.tsx', `import * as React from "react"
+import { cn } from "@/lib/utils"
+
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)} {...props} />
+  )
+)
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
+  )
+)
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h3 ref={ref} className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
+  )
+)
+CardTitle.displayName = "CardTitle"
+
+const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <p ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
+  )
+)
+CardDescription.displayName = "CardDescription"
+
+const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  )
+)
+CardContent.displayName = "CardContent"
+
+const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex items-center p-6 pt-0", className)} {...props} />
+  )
+)
+CardFooter.displayName = "CardFooter"
+
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }`);
+
+    ensureFallback('/src/components/ui/input.tsx', `import * as React from "react"
+import { cn } from "@/lib/utils"
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
-export const Input = ({ className = '', ...props }: InputProps) => (
-  <input className={'w-full rounded-md border border-gray-700 bg-black text-white px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ' + className} {...props} />
-);
-export default Input;`);
 
-    ensureFallback('/src/components/ui/textarea.tsx', `import React from 'react';
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
-export const Textarea = ({ className = '', ...props }: TextareaProps) => (
-  <textarea className={'w-full rounded-md border border-gray-700 bg-black text-white px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ' + className} {...props} />
-);
-export default Textarea;`);
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Input.displayName = "Input"
 
-    ensureFallback('/src/components/ui/badge.tsx', `import React from 'react';
-export const Badge = ({ className = '', children }: React.PropsWithChildren<{ className?: string }>) => (
-  <span className={'inline-flex items-center rounded-full border border-gray-700 bg-gray-800 px-2 py-0.5 text-xs text-gray-200 ' + className}>{children}</span>
-);
-export default Badge;`);
+export { Input }`);
+
+    ensureFallback('/src/components/ui/badge.tsx', `import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        outline: "text-foreground",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  }
+)
+
+export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
+}
+
+export { Badge, badgeVariants }`);
+
+    // Add essential utility functions that shadcn components need
+    ensureFallback('/src/lib/utils.ts', `import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}`);
 
     // Detect App path case-insensitively and ensure main.tsx wraps with BrowserRouter
     const appKey = Object.keys(mapped).find(

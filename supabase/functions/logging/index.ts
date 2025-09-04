@@ -67,6 +67,13 @@ serve(async (req) => {
       case 'log-build': {
         const logEntry: LogEntry = await req.json();
         
+        // Skip logging for template projectId
+        if (logEntry.projectId === ':projectId') {
+          return new Response(JSON.stringify({ success: true, message: 'Template project - logging skipped' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
         const { error } = await supabase
           .from('build_logs')
           .insert({

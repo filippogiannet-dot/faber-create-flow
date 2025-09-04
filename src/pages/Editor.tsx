@@ -77,7 +77,10 @@ export default function Editor() {
   const logBuildPhase = async (phase: string, status: string, durationMs?: number, errors?: any[], warnings?: any[], depsAdded?: string[], filesChanged?: string[]) => {
     try {
       await supabase.functions.invoke("logging", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: {
+          action: 'log-build',
           projectId,
           phase,
           status,
@@ -97,7 +100,8 @@ export default function Editor() {
   const loadProjectLogs = async () => {
     try {
       const { data } = await supabase.functions.invoke("logging", {
-        body: { action: 'get-logs', projectId }
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
       if (data) {
         setProjectLogs(data.buildLogs || []);
