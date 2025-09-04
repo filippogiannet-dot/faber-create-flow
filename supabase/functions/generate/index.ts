@@ -27,37 +27,59 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert React + TypeScript generator. Create complete, functional applications.
+    const systemPrompt = `You are an expert React + TypeScript application architect. Generate complete, production-ready applications following AppSpec v1 format.
 
-Output ONLY strict JSON in this exact shape:
+Output ONLY strict JSON in this exact AppSpec v1 shape:
 {
+  "app_meta": {
+    "name": "string",
+    "description": "string", 
+    "design_system": "shadcn|mui|mantine|chakra|headless+radix",
+    "theme": "light|dark|system"
+  },
+  "dependencies": {
+    "prod": { "package": "exact-version" },
+    "dev": { "package": "exact-version" }
+  },
+  "routes": [
+    { "path": "/", "component": "Home" },
+    { "path": "/about", "component": "About" }
+  ],
   "files": [
-    { "path": "/index.html", "content": "..." },
-    { "path": "/src/main.tsx", "content": "..." },
-    { "path": "/src/App.tsx", "content": "..." },
-    { "path": "/src/components/ComponentName.tsx", "content": "..." }
+    {
+      "path": "/index.html",
+      "language": "html", 
+      "content": "<!DOCTYPE html>..."
+    },
+    {
+      "path": "/src/App.tsx",
+      "language": "tsx",
+      "content": "import React from 'react'..."
+    }
   ]
 }
 
-CRITICAL RULES:
-- Generate COMPLETE, FUNCTIONAL applications based on user prompt
-- Build modern React 18 + TypeScript + Tailwind apps with react-router-dom v6
-- /index.html MUST include <script src="https://cdn.tailwindcss.com"></script> and <div id="root"></div>
-- /src/main.tsx MUST render BrowserRouter wrapping App component
-- /src/App.tsx MUST be a complete application with:
-  * Multiple routes and pages (at least 3-4 meaningful routes)
-  * Modern responsive UI with proper navigation
-  * State management using React hooks
-  * Form handling with validation
-  * Real functionality matching the user's request
-  * Professional styling with Tailwind
-- Generate all necessary components in /src/components/
-- Use semantic HTML and proper TypeScript interfaces
-- Include realistic data and content, not placeholders
-- All imports must be relative paths (./components/Header) - NO path aliases
-- Make it production-ready: error boundaries, loading states, proper UX
-- NEVER generate "Hello World" or basic templates - create full applications
-- Return only JSON, no explanations or code fences`;
+CRITICAL ARCHITECTURE RULES:
+- Generate COMPLETE, FUNCTIONAL applications matching user requirements
+- Select design_system intelligently:
+  * dashboard/B2B/CRM/admin → "shadcn" 
+  * material/android/google → "mui"
+  * marketing/landing → "shadcn" 
+  * mobile-first/modern → "mantine"
+- Include ALL necessary dependencies with exact versions:
+  * Core: react@18.3.1, react-dom@18.3.1, react-router-dom@6.30.1
+  * TypeScript: typescript@5.0.0, @types/react@18.3.0, @types/react-dom@18.3.0  
+  * Styling: tailwindcss@3.4.0 (always), shadcn components when selected
+  * State: zustand@4.5.0 for client state
+  * Forms: react-hook-form@7.53.0, zod@3.22.0, @hookform/resolvers@3.9.0
+  * Icons: lucide-react@0.462.0
+  * Animation: framer-motion@11.0.0 when needed
+- Build responsive, accessible applications with proper routing
+- Use semantic HTML, TypeScript interfaces, proper error handling
+- Include realistic content and data, not placeholders
+- NEVER generate "Hello World" - create full functional applications
+- All imports relative paths (./components/Header) - NO path aliases
+- Return only JSON, no explanations or markdown`;
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -65,13 +87,12 @@ CRITICAL RULES:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-5-2025-08-07',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.3,
-        max_tokens: 4096,
+        max_completion_tokens: 4096,
       }),
     });
 
@@ -82,31 +103,54 @@ CRITICAL RULES:
     const data = await response.json();
     const raw = data.choices?.[0]?.message?.content ?? '';
 
-    // Robust JSON extraction (handles fenced blocks and extra prose)
-    function tryParseJson(input: string): any | null {
+    // Enhanced JSON parsing for AppSpec v1 format
+    function tryParseAppSpec(input: string): any | null {
       const candidates: string[] = [];
       const fenceRegex = /```(?:json)?\n([\s\S]*?)```/gi;
       let m: RegExpExecArray | null;
       while ((m = fenceRegex.exec(input)) !== null) {
         candidates.push(m[1]);
       }
-      // If no fenced code, add whole content
       if (candidates.length === 0) candidates.push(input);
 
-      // Also try to extract an object that contains a "files" array
-      const objectWithFiles = input.match(/\{[\s\S]*?"files"[\s\S]*?\}/);
-      if (objectWithFiles) candidates.unshift(objectWithFiles[0]);
+      // Try to extract AppSpec object 
+      const appSpecRegex = /\{[\s\S]*?"app_meta"[\s\S]*?\}/;
+      const appSpecMatch = input.match(appSpecRegex);
+      if (appSpecMatch) candidates.unshift(appSpecMatch[0]);
 
       for (const c of candidates) {
         try {
           const parsed = JSON.parse(c);
-          if (parsed && Array.isArray(parsed.files)) return parsed;
+          // Validate AppSpec v1 structure
+          if (parsed && parsed.app_meta && Array.isArray(parsed.files)) {
+            return parsed;
+          }
+          // Fallback: convert old format to new
+          if (parsed && Array.isArray(parsed.files)) {
+            return {
+              app_meta: {
+                name: "Generated App",
+                description: "AI Generated Application", 
+                design_system: "shadcn",
+                theme: "system"
+              },
+              dependencies: {
+                prod: {
+                  "react": "18.3.1",
+                  "react-dom": "18.3.1", 
+                  "react-router-dom": "6.30.1"
+                }
+              },
+              routes: [],
+              files: parsed.files
+            };
+          }
         } catch (_) { /* continue */ }
       }
       return null;
     }
 
-    let parsedResponse = tryParseJson(raw);
+    let parsedResponse = tryParseAppSpec(raw);
 
     // Build a comprehensive default app if parsing failed
     if (!parsedResponse) {
@@ -144,8 +188,8 @@ CRITICAL RULES:
       };
     }
 
-    // Normalize file paths and ensure required files
-    const files = (parsedResponse.files as Array<{ path: string; content: string }> )
+    // Extract files from AppSpec format
+    const files = (parsedResponse.files as Array<{ path: string; content: string; language?: string }> )
       .filter(f => f && typeof f.path === 'string' && typeof f.content === 'string')
       .map(f => {
         let path = f.path.startsWith('/') ? f.path : '/' + f.path;
@@ -180,7 +224,10 @@ CRITICAL RULES:
       });
     }
 
-    const normalized = { files };
+    const normalized = { 
+      files,
+      meta: parsedResponse.app_meta || { name: "Generated App", description: "AI Generated", design_system: "shadcn" }
+    };
 
     console.log('Generated code successfully:', { 
       promptLength: prompt.length,

@@ -224,16 +224,38 @@ export default Badge;`);
   }, [files]);
 
   const dependencies = useMemo(() => ({
+    // Core React stack
     react: "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1",
+    
+    // TypeScript support
+    typescript: "^5.0.0",
+    "@types/react": "^18.3.0", 
+    "@types/react-dom": "^18.3.0",
+    
+    // Styling & UI libraries (AppSpec standard)
+    tailwindcss: "^3.4.0",
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "tailwind-merge": "^2.6.0",
+    clsx: "^2.1.1",
+    
+    // State management
+    zustand: "^4.5.0",
+    
+    // Form handling
+    "react-hook-form": "^7.53.0",
+    zod: "^3.22.0",
+    "@hookform/resolvers": "^3.9.0",
+    
+    // Icons & animations  
+    "lucide-react": "^0.462.0",
+    "framer-motion": "^11.0.0",
+    
+    // UI component libraries (available for selection)
     "@rewind-ui/core": "^0.20.0",
     "keep-react": "latest",
-    "lucide-react": "^0.462.0",
-    clsx: "^2.1.1",
-    tailwindcss: "^3.4.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
   }), []);
 
   return (
