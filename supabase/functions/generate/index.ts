@@ -41,20 +41,23 @@ IMPORTANT: Always return a valid JSON response in this exact format:
 
 Rules:
 - Use TypeScript and modern React (function components with hooks)
-- Use Tailwind CSS for styling with semantic classes
-- Import UI components from @rewind-ui/core for buttons, forms, tables, modals, etc.
-- Use @rewind-ui/core components like: Button, Input, Modal, Table, Card, Badge, etc.
+- Use Tailwind CSS utility classes for styling
+- Prefer UI components from @rewind-ui/core. If something is missing, you may use keep-react as a fallback
+- When using UI libraries, actually render basic components (Button, Input, Card, Table, Modal) so the preview is complete
+- Include react-router-dom when you add routes and show a simple Router setup (BrowserRouter + Routes) in /App.tsx
+- Always include at least: /index.html (with <script src=\"https://cdn.tailwindcss.com\"></script>), /main.tsx, and /App.tsx so the app runs in the sandbox
 - Make components responsive and accessible
 - Include proper TypeScript types
 - Keep components clean and well-structured
-- Always include at least one main App.tsx file
-- For complex apps, split into multiple component files
-- Include boilerplate files when needed (package.json, index.html, main.tsx)
+- For complex apps, split into multiple files (e.g., /src/CustomerList.tsx, /src/AddCustomerForm.tsx)
+- Include boilerplate files when needed
 
 Example imports for UI components:
 import { Button, Input, Modal, Table, Card, Badge } from '@rewind-ui/core';
+// or
+import { Button, Input, Modal, Table, Card, Badge } from 'keep-react';
 
-Generate practical, working code that demonstrates the requested functionality with complete UI components.`;
+Generate practical, working code that demonstrates the requested functionality with complete UI components and routes when appropriate.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

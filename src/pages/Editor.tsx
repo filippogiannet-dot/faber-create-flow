@@ -563,7 +563,7 @@ const Editor = () => {
       {/* Main Layout - Two Columns */}
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Panel - Chat */}
-        <div className="w-2/5 border-r bg-card flex flex-col">
+        <div className="w-1/3 border-r bg-card flex flex-col">
           {/* Chat Messages */}
           <ScrollArea className="flex-1 p-4">
             {chatMessages.length === 0 ? (

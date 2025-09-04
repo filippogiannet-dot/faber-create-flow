@@ -1,5 +1,5 @@
-import { Sandpack } from "@codesandbox/sandpack-react";
-import { useEffect, useState } from "react";
+import { SandpackProvider, SandpackPreview, SandpackLayout, SandpackConsole } from "@codesandbox/sandpack-react";
+import { useEffect, useMemo, useState } from "react";
 
 interface FileData {
   path: string;
@@ -16,12 +16,12 @@ export default function LivePreview({ files }: LivePreviewProps) {
   useEffect(() => {
     if (!files || files.length === 0) {
       setSandpackFiles({
-        "/App.js": {
+        "/App.tsx": {
           code: `export default function App() {
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold">Welcome to Live Preview!</h1>
-      <p className="mt-4 text-gray-600">Generate some code to see it live here.</p>
+      <h1 className="text-2xl font-bold">Benvenuto nella Live Preview</h1>
+      <p className="mt-4 text-muted-foreground">Genera del codice per vedere l'anteprima qui.</p>
     </div>
   );
 }`,
@@ -32,32 +32,41 @@ export default function LivePreview({ files }: LivePreviewProps) {
 
     const mapped: Record<string, { code: string }> = {};
     files.forEach((f) => {
-      mapped[f.path] = { code: f.content };
+      const path = f.path.startsWith("/") ? f.path : `/${f.path}`;
+      mapped[path] = { code: f.content };
     });
     setSandpackFiles(mapped);
   }, [files]);
 
+  const dependencies = useMemo(() => ({
+    react: "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1",
+    "@rewind-ui/core": "^0.20.0",
+    "keep-react": "latest",
+    "lucide-react": "^0.462.0",
+    clsx: "^2.1.1",
+    tailwindcss: "^3.4.0",
+  }), []);
+
   return (
     <div className="h-full w-full">
-      <Sandpack
+      <SandpackProvider
         template="react-ts"
         theme="dark"
         files={sandpackFiles}
-        options={{
-          showTabs: true,
-          showConsole: true,
-          editorHeight: 400,
-          autorun: true,
-          showNavigator: true,
-        }}
         customSetup={{
-          dependencies: {
-            "react": "^18.3.1",
-            "react-dom": "^18.3.1",
-            "tailwindcss": "^3.4.0",
-          },
+          dependencies,
         }}
-      />
+      >
+        <SandpackLayout style={{ height: "100%" }}>
+          {/* Preview only by default; code editor is handled by Monaco outside */}
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <SandpackPreview style={{ height: "100%" }} showNavigator />
+          </div>
+        </SandpackLayout>
+        <SandpackConsole style={{ height: 180 }} />
+      </SandpackProvider>
     </div>
   );
 }
