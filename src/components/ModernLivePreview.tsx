@@ -621,8 +621,9 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ code, onError, onSucce
       <iframe
         ref={iframeRef}
         className="w-full h-full"
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts allow-same-origin allow-modals allow-forms"
         title="Live Preview"
+        style={{ border: 'none' }}
       />
       
       {/* Debug info panel */}
