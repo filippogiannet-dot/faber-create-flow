@@ -611,46 +611,41 @@ export function cn(...inputs: ClassValue[]) {
   };
 
   return (
-    <div className="absolute inset-0 w-full bg-black flex flex-col">
+    <div className="w-full h-full flex flex-col bg-black">
       <StatusBar />
-      <div className="flex-1 relative">
-        <div className="absolute inset-0">
-          <SandpackProvider
-            template="react-ts"
-            theme="dark"
-            files={sandpackFiles}
-            customSetup={{
-              dependencies,
-              entry: "/src/index.tsx"
-            }}
-            options={{
-              autorun: true,
-              autoReload: true,
-              recompileMode: "immediate",
-              recompileDelay: 100
-            }}
-          >
-            <SandpackLayout style={{ height: "100%", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
-              {/* Preview with Error Overlay */}
-              <div style={{ height: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
-                <SandpackPreview 
-                  style={{ 
-                    flex: 1,
-                    height: "100%",
-                    width: "100%",
-                    backgroundColor: "hsl(0 0% 0%)",
-                    border: "none"
-                  }} 
-                  showNavigator={false}
-                  showRefreshButton={true}
-                  showOpenInCodeSandbox={false}
-                />
-                <ErrorOverlay />
-              </div>
-            </SandpackLayout>
-          </SandpackProvider>
-        </div>
-      </div>
+      <SandpackProvider
+        template="react-ts"
+        theme="dark"
+        files={sandpackFiles}
+        customSetup={{
+          dependencies,
+          entry: "/src/index.tsx"
+        }}
+        options={{
+          autorun: true,
+          autoReload: true,
+          recompileMode: "immediate",
+          recompileDelay: 100
+        }}
+      >
+        <SandpackLayout className="flex-1 !h-full !w-full" style={{ backgroundColor: "hsl(0 0% 0%)" }}>
+          <div className="relative h-full w-full">
+            <SandpackPreview
+              style={{
+                height: "100%",
+                width: "100%",
+                flex: 1,
+                backgroundColor: "hsl(0 0% 0%)",
+                border: "none"
+              }}
+              showNavigator={false}
+              showRefreshButton={true}
+              showOpenInCodeSandbox={false}
+            />
+            <ErrorOverlay />
+          </div>
+        </SandpackLayout>
+      </SandpackProvider>
     </div>
   );
 }
