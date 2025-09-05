@@ -253,12 +253,32 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       mapped[path] = { code: f.content };
     });
 
-    // Ensure index.html exists
+    // Ensure index.html exists and contains Tailwind CDN + root
     if (!mapped['/index.html']) {
       mapped['/index.html'] = { code: defaultIndexHtml };
+    } else {
+      try {
+        const current = mapped['/index.html'].code;
+        let updated = current;
+        // Inject Tailwind CDN if missing
+        if (!/cdn\.tailwindcss\.com/.test(current)) {
+          updated = current.replace(/<head>/i, '<head>\n    <script src="https://cdn.tailwindcss.com"></script>');
+        }
+        // Ensure #root exists
+        if (!/<div id=["']root["']><\/div>/.test(updated)) {
+          updated = updated.replace(/<body[^>]*>/i, (m) => `${m}\n    <div id="root"></div>`);
+        }
+        // Ensure full-height styles
+        if (!/html, body, #root/.test(updated)) {
+          updated = updated.replace(/<head>/i, '<head>\n    <style>html,body,#root{height:100%;min-height:100vh;margin:0;padding:0;}</style>');
+        }
+        mapped['/index.html'] = { code: updated };
+      } catch {
+        mapped['/index.html'] = { code: defaultIndexHtml };
+      }
     }
 
-    // Ensure index.css exists with Tailwind
+    // Ensure index.css exists with Tailwind (only used for utility classes; CDN handles processing)
     if (!mapped['/src/index.css']) {
       mapped['/src/index.css'] = { code: mainIndexCss };
     }
@@ -462,6 +482,19 @@ export function cn(...inputs: ClassValue[]) {
     // Headless/UI libs expected by generator
     "@headlessui/react": "^2.2.7",
     "@heroicons/react": "^2.2.0",
+
+    // Major UI systems support (loaded only if referenced)
+    "@chakra-ui/react": "^2.8.2",
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.0",
+    "@mui/material": "^5.15.20",
+    "@mui/icons-material": "^5.15.20",
+    antd: "^5.20.0",
+    "react-bootstrap": "^2.10.5",
+    bootstrap: "^5.3.3",
+    "@mantine/core": "^7.12.2",
+    "@mantine/hooks": "^7.12.2",
+    daisyui: "^4.12.14",
 
     // Charts / viz
     recharts: "^2.15.4",
