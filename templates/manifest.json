@@ -1,0 +1,20 @@
+[
+  {
+    "id": "template:dashboard:shadcn",
+    "name": "Dashboard Shadcn",
+    "files": [
+      "src/App.tsx",
+      "src/pages/Index.tsx",
+      "src/components/ui/card.tsx",
+      "src/components/ui/button.tsx"
+    ],
+    "dependencies": {
+      "react": "18.x",
+      "react-dom": "18.x",
+      "@radix-ui/react-slot": "1.x",
+      "class-variance-authority": "0.7.x",
+      "tailwindcss": "3.x"
+    },
+    "description": "Dashboard base with cards and actions"
+  }
+]

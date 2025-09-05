@@ -1,0 +1,14 @@
+[
+  { "id": "component/button/primary", "path": "src/components/ui/button.tsx", "library": "shadcn" },
+  { "id": "component/card/base", "path": "src/components/ui/card.tsx", "library": "shadcn" },
+  { "id": "component/input/base", "path": "src/components/ui/input.tsx", "library": "shadcn" },
+  { "id": "component/badge/base", "path": "src/components/ui/badge.tsx", "library": "shadcn" },
+  { "id": "component/progress/base", "path": "src/components/ui/progress.tsx", "library": "radix+tailwind" },
+  { "id": "component/label/base", "path": "src/components/ui/label.tsx", "library": "radix+tailwind" },
+  { "id": "component/hover-card/base", "path": "src/components/ui/hover-card.tsx", "library": "radix+tailwind" },
+  { "id": "component/popover/base", "path": "src/components/ui/popover.tsx", "library": "radix+tailwind" },
+  { "id": "component/radio-group/base", "path": "src/components/ui/radio-group.tsx", "library": "radix+tailwind" },
+  { "id": "component/scroll-area/base", "path": "src/components/ui/scroll-area.tsx", "library": "radix+tailwind" },
+  { "id": "component/drawer/base", "path": "src/components/ui/drawer.tsx", "library": "vaul+tailwind" },
+  { "id": "component/resizable/base", "path": "src/components/ui/resizable.tsx", "library": "react-resizable-panels" }
+]

@@ -90,7 +90,43 @@ EXAMPLE DOMAIN MAPPING:
 - Dashboard → Analytics charts with recharts, user management, settings, notifications with react-toastify
 - Todo App → Task creation with react-select, categories, priority levels, completion tracking with react-beautiful-dnd
 
-Return ONLY JSON, no explanations.`;
+    Return ONLY JSON, no explanations.`;
+
+    const appSpecSystemPrompt = `You are an expert React + TypeScript application architect. Always generate a strict AppSpec v1 JSON for complete, production-ready apps.
+
+CRITICAL: Output ONLY AppSpec v1 JSON in this exact structure:
+{
+  "app_meta": {
+    "name": "string",
+    "description": "string",
+    "design_system": "shadcn|chakra|mui|mantine|tailwind-only|headless+radix"
+  },
+  "template_id": "string",
+  "components_used": [ { "id": "component/button/primary", "props": { "label": "Save" } } ],
+  "files": [ { "path": "src/App.tsx", "language": "tsx", "content": "/* full compilable code */" } ],
+  "seed": 12345,
+  "notes": "string"
+}
+
+RULES:
+- Validate all required fields. If unsure about components, propose 2-3 options in notes.
+- Use realistic, varied data (no repeated mock names). Prefer synthetic data; vary with the seed.
+- Reference only components/templates present in the registry manifest (we will resolve them).
+- All code in files[] must be complete and compilable. Include index.html, src/main.tsx, and src/index.css.
+- For design_system, wrap the app with the correct providers in src/main.tsx as needed.
+
+LIBRARIES (allowed): @headlessui/react, @heroicons/react, recharts, react-toastify, framer-motion, react-beautiful-dnd, react-table, react-select, react-modal.
+
+NEVER:
+- Return prose or markdown; only raw JSON.
+- Use lorem ipsum or placeholders.
+- Reference missing imports.
+
+Notes about variability:
+- Temperature should lead to diverse outputs; avoid identical datasets across generations.
+- Use different names, companies, and numbers per run unless seed is provided.
+`;
+
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -101,10 +137,12 @@ Return ONLY JSON, no explanations.`;
       body: JSON.stringify({
         model: 'gpt-5-2025-08-07',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: appSpecSystemPrompt },
           { role: 'user', content: prompt }
         ],
         max_completion_tokens: 4096,
+        temperature: 0.8,
+        top_p: 0.95,
       }),
     });
 

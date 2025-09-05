@@ -446,32 +446,55 @@ export function cn(...inputs: ClassValue[]) {
     react: "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1",
-    
+
     // TypeScript support
     typescript: "^5.0.0",
-    "@types/react": "^18.3.0", 
+    "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    
+
     // Styling & UI libraries (AppSpec standard)
     tailwindcss: "^3.4.0",
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "tailwind-merge": "^2.6.0",
     clsx: "^2.1.1",
-    
-    // State management
-    zustand: "^4.5.0",
-    
+
+    // Headless/UI libs expected by generator
+    "@headlessui/react": "^2.2.7",
+    "@heroicons/react": "^2.2.0",
+
+    // Charts / viz
+    recharts: "^2.15.4",
+    "chart.js": "^4.5.0",
+    "react-chartjs-2": "^5.3.0",
+
+    // Notifications
+    "react-toastify": "^11.0.5",
+
+    // Animations
+    "framer-motion": "^11.0.0",
+
+    // DnD / Tables / Select / Modal
+    "react-beautiful-dnd": "^13.1.1",
+    "react-table": "^7.8.0",
+    "react-select": "^5.10.2",
+    "react-modal": "^3.16.3",
+
     // Form handling
     "react-hook-form": "^7.53.0",
     zod: "^3.22.0",
     "@hookform/resolvers": "^3.9.0",
-    
-    // Icons & animations  
+
+    // State & utils
+    zustand: "^4.5.0",
+    axios: "^1.11.0",
+    dayjs: "^1.11.10",
+    lodash: "^4.17.21",
+
+    // Icons
     "lucide-react": "^0.462.0",
-    "framer-motion": "^11.0.0",
-    
-    // UI component libraries (available for selection)
+
+    // Optional UI component kits we support
     "@rewind-ui/core": "^0.20.0",
     "keep-react": "latest",
   }), []);
