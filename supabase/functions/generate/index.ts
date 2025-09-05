@@ -27,96 +27,229 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert React developer who builds modern, production-ready web applications. You generate applications that are visually stunning, highly interactive, and use modern React patterns.
+    // Pattern-breaking system prompt focusing on SINGLE React component generation
+    const RANDOM_SEED = Math.random().toString(36).substring(7);
+    const SYSTEM_PROMPT = `🔥 CRITICAL INSTRUCTIONS - READ CAREFULLY 🔥
 
-CRITICAL REQUIREMENTS:
-1. Generate ONLY modern React TypeScript components using functional components and hooks
-2. Use Tailwind CSS for ALL styling - never use inline styles or plain CSS
-3. Create beautiful, modern UI that looks like it came from top design agencies
-4. Generate multiple interconnected files that work together as a complete application
-5. Include proper state management, event handlers, and interactive features
-6. Make every component responsive and accessible
-7. Add smooth animations and micro-interactions using Tailwind classes
-8. Use modern design patterns: glassmorphism, subtle shadows, proper spacing
-9. Include proper TypeScript types for everything
+You are a MODERN REACT DEVELOPER, not an HTML developer. You MUST follow these rules EXACTLY:
 
-OUTPUT FORMAT - Return ONLY valid JSON in this EXACT format:
-{
-  "files": [
-    {
-      "path": "/src/App.tsx",
-      "content": "COMPLETE_REACT_COMPONENT_CODE_HERE"
-    },
-    {
-      "path": "/src/components/Header.tsx",
-      "content": "COMPONENT_CODE_HERE"
-    },
-    {
-      "path": "/src/types/index.ts",
-      "content": "TYPE_DEFINITIONS_HERE"
-    }
-  ]
-}
+❌ ABSOLUTELY FORBIDDEN - NEVER GENERATE:
+- ANY HTML files (index.html, etc.)
+- Multi-file projects with file structures
+- CRM applications, dashboards, or business management tools
+- Customer management, deals, reports, or settings pages
+- Any project with Navigation.tsx, Dashboard.tsx, Customers.tsx components
+- The word "CRM", "Customer", "Dashboard", "Management" anywhere in your code
 
-AVAILABLE SHADCN/UI COMPONENTS - USE THESE:
-- import { Button } from "@/components/ui/button"
-- import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-- import { Input } from "@/components/ui/input"
-- import { Badge } from "@/components/ui/badge"
-- import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-- import { Progress } from "@/components/ui/progress"
-- import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-- import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-- import { Lucide icons } from "lucide-react" (Heart, Star, User, Settings, etc.)
+✅ YOU MUST GENERATE:
+- ONE SINGLE React functional component
+- Modern, creative, FUN applications
+- Something completely different every time
+- Interactive and engaging user experiences
 
-DESIGN PRINCIPLES:
-- Use modern color palettes (grays: slate-50 to slate-900, blues: blue-500, etc.)
-- Implement proper visual hierarchy with typography (text-3xl, text-lg, etc.)
-- Add hover effects and transitions (hover:bg-blue-600, transition-all duration-200)
-- Use proper spacing (p-6, m-4, space-y-4, gap-6)
-- Include loading states and empty states
-- Make everything interactive with proper click handlers
-- Use modern layout techniques (flex, grid, space-between)
-- Use glassmorphism effects: bg-white/10 backdrop-blur-sm
-- Add subtle shadows: shadow-lg shadow-black/5
-- Include hover animations: hover:scale-105 transition-all duration-200
-- Use gradients: bg-gradient-to-r from-blue-500 to-purple-600
+🎯 GENERATION RULES:
+1. Generate EXACTLY ONE React component file
+2. Component must be named "App" and exported as default
+3. Use ONLY React hooks (useState, useEffect) - NO class components
+4. Style with Tailwind CSS utility classes
+5. Make it interactive with buttons, forms, animations
+6. Create something UNIQUE and CREATIVE each time
 
-MANDATORY PATTERNS FOR EVERY APP:
-1. Always use useState and useEffect hooks appropriately
-2. Always include proper TypeScript interfaces
-3. Always use modern Tailwind classes for beautiful styling
-4. Always include hover effects and transitions
-5. Always make it responsive with proper spacing
-6. Always include loading states and empty states
-7. Always use semantic HTML with proper accessibility
-8. Always include proper event handlers
-9. Always use modern React patterns (no class components)
-10. Always generate multiple related files when the app is complex
+🎨 REQUIRED OUTPUT FORMAT:
+\`\`\`javascript
+import React, { useState, useEffect } from 'react';
 
-VISUAL REQUIREMENTS:
-- Use gradients: bg-gradient-to-r from-blue-500 to-purple-600
-- Use shadows: shadow-lg, shadow-xl for depth
-- Use rounded corners: rounded-xl, rounded-2xl
-- Use proper spacing: p-6, m-4, space-y-6, gap-4
-- Use hover effects: hover:bg-blue-600, hover:scale-105
-- Use transitions: transition-all duration-200
-- Use modern colors: slate-800, blue-600, green-500, red-500
-- Use proper typography: text-3xl font-bold, text-lg font-medium
+const App = () => {
+  // Your creative component logic here
+  const [state, setState] = useState();
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Your unique, creative content here */}
+      </div>
+    </div>
+  );
+};
 
-NEVER GENERATE:
-- Plain HTML without React components
-- Inline styles
-- Class components
-- Basic CSS without Tailwind
-- Non-interactive components
-- Components without proper state management
-- Apps without proper visual hierarchy
-- Components without TypeScript types
-- The same CRM application repeatedly - BE CREATIVE AND UNIQUE
+export default App;
+\`\`\`
 
-Remember: Every app should look like it was built by a top design agency and function like a professional application. BE CREATIVE and generate something completely different each time.`;
+🎲 RANDOMIZATION REQUIREMENT:
+Add this random number to your component: ${RANDOM_SEED}
+Use this number somewhere in your component to ensure uniqueness.
+
+USER REQUEST: {prompt}
+
+Generate ONE creative React component that fulfills this request. BE CREATIVE AND UNIQUE!`;
+
+    // Validation to prevent CRM/HTML pattern regressions
+    const validateGeneration = (generatedCode: string): boolean => {
+      const forbiddenPatterns = [
+        'index.html', 'main.tsx', '/src/', 'Navigation.tsx', 'Dashboard.tsx', 'Customers.tsx',
+        'Deals.tsx', 'Reports.tsx', 'Settings.tsx', 'CRM', 'Customer', 'Management', 'Dashboard', 'Business', 'Sales'
+      ];
+      const requiredPatterns = ['import React', 'const App', 'export default', 'useState', 'className'];
+      for (const p of forbiddenPatterns) {
+        if (generatedCode.toLowerCase().includes(p.toLowerCase())) {
+          console.log(`❌ REJECTED: Contains forbidden pattern "${p}"`);
+          return false;
+        }
+      }
+      for (const p of requiredPatterns) {
+        if (!generatedCode.includes(p)) {
+          console.log(`❌ REJECTED: Missing required pattern "${p}"`);
+          return false;
+        }
+      }
+      // Ensure it's a single file-like output (not embedding multiple files)
+      const fileCount = (generatedCode.match(/\.(tsx|html|js)/g) || []).length;
+      if (fileCount > 1) {
+        console.log(`❌ REJECTED: Multiple files detected (${fileCount})`);
+        return false;
+      }
+      console.log('✅ VALIDATED: Code passes all checks');
+      return true;
+    };
+
+    // Variety injection templates
+    const VARIETY_TEMPLATES = {
+      game: {
+        concepts: ['tic-tac-toe', 'memory game', 'word guessing', 'number puzzle', 'rock paper scissors'],
+        colors: ['from-green-400 to-blue-500', 'from-purple-400 to-pink-500', 'from-yellow-400 to-red-500']
+      },
+      tool: {
+        concepts: ['color picker', 'unit converter', 'password generator', 'qr code generator', 'text formatter'],
+        colors: ['from-indigo-400 to-purple-600', 'from-teal-400 to-cyan-600', 'from-orange-400 to-pink-500']
+      },
+      creative: {
+        concepts: ['drawing app', 'photo filters', 'music visualizer', 'pattern generator', 'gradient maker'],
+        colors: ['from-pink-400 to-purple-600', 'from-blue-400 to-indigo-600', 'from-green-400 to-teal-600']
+      }
+    } as const;
+
+    const injectVariety = (basePrompt: string): string => {
+      const categories = Object.keys(VARIETY_TEMPLATES) as Array<keyof typeof VARIETY_TEMPLATES>;
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+      const template = VARIETY_TEMPLATES[randomCategory];
+      const randomConcept = template.concepts[Math.floor(Math.random() * template.concepts.length)];
+      const randomColor = template.colors[Math.floor(Math.random() * template.colors.length)];
+      return `${basePrompt}
+
+VARIETY INJECTION:
+- Inspiration concept: ${randomConcept}
+- Color scheme: bg-gradient-to-br ${randomColor}
+- Make it unique and different from any business/CRM application
+- Random seed: ${Math.random().toString(36).substring(7)}`;
+    };
+
+    const getFallbackComponent = (userPrompt: string): string => {
+      const randomId = Math.random().toString(36).substring(7);
+      return `
+import React, { useState } from 'react';
+
+const App = () => {
+  const [clicks, setClicks] = useState(0);
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-400 to-purple-600 p-8 flex items-center justify-center">
+      <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-8 max-w-md w-full text-center border border-white/20">
+        <h1 className="text-3xl font-bold text-white mb-6">
+          Custom App for: ${userPrompt}
+        </h1>
+        <div className="mb-6">
+          <p className="text-lg text-white/80 mb-4">Clicks: {clicks}</p>
+          <button 
+            onClick={() => setClicks(clicks + 1)}
+            className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-semibold transition-colors border border-white/30"
+          >
+            Click Me!
+          </button>
+        </div>
+        <p className="text-sm text-white/60">ID: ${randomId}</p>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+`;
+    };
+
+    // Model selection + parameter compatibility
+    const selectModel = () => Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini';
+    const isNewerModel = (m: string) => /^(gpt-5|gpt-4\.1|o3|o4)/.test(m);
+
+    // Core generation loop with validation and retries
+    const generateWithValidation = async (baseUserPrompt: string, maxAttempts = 5): Promise<string> => {
+      const model = selectModel();
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`🔄 Generation attempt ${attempt}/${maxAttempts}`);
+        const varietyPrompts = [
+          'Create something completely different from a business application.',
+          'Build a fun, interactive experience.',
+          'Make a creative tool or game.',
+          'Design something colorful and engaging.',
+          'Build an entertainment or utility app.'
+        ];
+        const randomVariety = varietyPrompts[Math.floor(Math.random() * varietyPrompts.length)];
+        const enhancedPrompt = injectVariety(`${baseUserPrompt}\n\nIMPORTANT: ${randomVariety} Random ID: ${Math.random()}`);
+
+        try {
+          const body: any = {
+            model,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT.replace('{prompt}', enhancedPrompt) }
+            ],
+          };
+          if (isNewerModel(model)) {
+            body.max_completion_tokens = 3000;
+            // temperature unsupported on newer models
+          } else {
+            body.temperature = 0.8;
+            body.max_tokens = 3000;
+            body.presence_penalty = 0.7;
+            body.frequency_penalty = 0.8;
+          }
+
+          const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openAIApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+          });
+
+          if (!resp.ok) {
+            const t = await resp.text();
+            throw new Error(`OpenAI API error ${resp.status}: ${t}`);
+          }
+
+          const json = await resp.json();
+          let generatedCode = json.choices?.[0]?.message?.content?.trim() || '';
+          if (!generatedCode) throw new Error('Empty generation');
+
+          // Strip markdown fences
+          if (generatedCode.includes('```')) {
+            const m = generatedCode.match(/```(?:javascript|jsx|tsx|js|ts)?\n([\s\S]*?)\n```/);
+            if (m && m[1]) generatedCode = m[1];
+          }
+
+          if (validateGeneration(generatedCode)) {
+            console.log(`✅ SUCCESS: Valid React component generated on attempt ${attempt}`);
+            return generatedCode;
+          }
+
+          console.log(`❌ ATTEMPT ${attempt} FAILED: Regenerating...`);
+          await new Promise((r) => setTimeout(r, 800));
+        } catch (err) {
+          console.error(`❌ ATTEMPT ${attempt} ERROR:`, err);
+        }
+      }
+      console.log('🛑 ALL ATTEMPTS FAILED: Returning fallback component');
+      return getFallbackComponent(baseUserPrompt);
+    };
 
     // Build contextual prompt to prevent repetitive content
     const sessionHistory = []; // TODO: Add session tracking
