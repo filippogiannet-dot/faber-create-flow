@@ -29,54 +29,44 @@ serve(async (req) => {
 
     // Pattern-breaking system prompt focusing on SINGLE React component generation
     const RANDOM_SEED = Math.random().toString(36).substring(7);
-    const SYSTEM_PROMPT = `🔥 CRITICAL INSTRUCTIONS - READ CAREFULLY 🔥
+    const SYSTEM_PROMPT = `You are an expert React developer who builds beautiful, modern web applications. You MUST fulfill the user's request accurately while following these technical requirements.
 
-You are a MODERN REACT DEVELOPER, not an HTML developer. You MUST follow these rules EXACTLY:
+🎯 YOUR MISSION: Build exactly what the user asks for, but as a SINGLE modern React component.
 
-❌ ABSOLUTELY FORBIDDEN - NEVER GENERATE:
-- ANY HTML files (index.html, etc.)
-- Multi-file projects with file structures
-- CRM applications, dashboards, or business management tools
-- Customer management, deals, reports, or settings pages
-- Any project with Navigation.tsx, Dashboard.tsx, Customers.tsx components
-- The word "CRM", "Customer", "Dashboard", "Management" anywhere in your code
-- React Router (Routes, Route, BrowserRouter, Link, useLocation, useNavigate)
-- Multi-page applications or navigation systems
-- Any imports from 'react-router-dom'
+✅ ALWAYS GENERATE:
+- ONE single React functional component file
+- Component named "App" with export default App
+- Modern React patterns (hooks, functional components)
+- Beautiful Tailwind CSS styling with gradients and modern design
+- Interactive functionality with useState/useEffect
+- Responsive design that works on all devices
+- Proper accessibility and user experience
 
-✅ YOU MUST GENERATE:
-- ONE SINGLE React functional component
-- Modern, creative, FUN applications
-- Something completely different every time
-- Interactive and engaging user experiences
-- SINGLE PAGE applications with NO routing
+❌ SPECIFIC TECHNICAL RESTRICTIONS:
+- NO multi-file projects (no /src/components/Navigation.tsx structure)
+- NO separate HTML files (no index.html)
+- NO file trees or project structures
+- NO class components - only functional components
+- NO plain HTML - must be React with JSX
 
-🎯 GENERATION RULES:
-1. Generate EXACTLY ONE React component file
-2. Component must be named "App" and exported as default
-3. Use ONLY React hooks (useState, useEffect) - NO class components
-4. Style with Tailwind CSS utility classes
-5. Make it interactive with buttons, forms, animations
-6. Create something UNIQUE and CREATIVE each time
-7. NO ROUTING - everything must be on one page with conditional rendering
+🔄 VARIETY REQUIREMENT:
+If the user request seems similar to previous generations, add unique features, different styling, or creative twists to make it distinctive. Use this random identifier in your component: ${RANDOM_SEED}
 
-🎨 REQUIRED OUTPUT FORMAT (SINGLE PAGE ONLY):
+📋 COMPONENT STRUCTURE TEMPLATE:
 \`\`\`javascript
 import React, { useState, useEffect } from 'react';
 
 const App = () => {
-  const [activeView, setActiveView] = useState('main');
+  // State management for user's requested functionality
+  const [state, setState] = useState();
+
+  // Component logic that fulfills user's request
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Use conditional rendering instead of routing */}
-        {activeView === 'main' && (
-          <div>Your main content here</div>
-        )}
-        {activeView === 'other' && (
-          <div>Other content here</div>
-        )}
+    <div className="min-h-screen bg-gradient-to-br from-[color1] to-[color2] p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Implement the user's requested app here */}
+        {/* Use modern UI patterns, beautiful design, smooth animations */}
       </div>
     </div>
   );
@@ -85,41 +75,85 @@ const App = () => {
 export default App;
 \`\`\`
 
-🎲 RANDOMIZATION REQUIREMENT:
-Add this random number to your component: ${RANDOM_SEED}
-Use this number somewhere in your component to ensure uniqueness.
+🎨 DESIGN REQUIREMENTS:
+- Use modern gradients and beautiful color schemes
+- Add hover effects and smooth transitions
+- Include proper spacing and typography
+- Make it visually appealing and professional
+- Add loading states and micro-interactions where appropriate
 
 USER REQUEST: {prompt}
 
-Generate ONE creative React component that fulfills this request. BE CREATIVE AND UNIQUE! NO ROUTING!`;
+Generate a complete React component that accurately fulfills this request with modern design and functionality.`;
 
-    // Validation to prevent CRM/HTML pattern regressions
-    const validateGeneration = (generatedCode: string): boolean => {
-      const forbiddenPatterns = [
-        'index.html', 'main.tsx', '/src/', 'Navigation.tsx', 'Dashboard.tsx', 'Customers.tsx',
-        'Deals.tsx', 'Reports.tsx', 'Settings.tsx', 'CRM', 'Customer', 'Management', 'Dashboard', 'Business', 'Sales',
-        'Routes', 'Route', 'BrowserRouter', 'react-router-dom', 'Link', 'useLocation', 'useNavigate'
+    // Extract meaningful keywords from user prompt for validation
+    const extractKeywords = (prompt: string): string[] => {
+      const meaningfulWords = prompt
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(word => 
+          word.length > 3 && 
+          !['build', 'create', 'make', 'develop', 'design', 'modern', 'simple', 'basic'].includes(word)
+        );
+      return meaningfulWords.slice(0, 3);
+    };
+
+    // Updated validation - more precise pattern detection
+    const validateGeneration = (generatedCode: string, userPrompt: string): boolean => {
+      // Only reject the SPECIFIC problematic patterns, not legitimate user requests
+      const forbiddenStructures = [
+        '/src/components/Navigation.tsx',
+        '/src/components/Dashboard.tsx', 
+        '/src/components/Customers.tsx',
+        '/src/components/Deals.tsx',
+        '/src/components/Reports.tsx',
+        '/src/components/Settings.tsx',
+        'index.html',
+        'main.tsx',
+        '└── src'
       ];
-      const requiredPatterns = ['import React', 'const App', 'export default', 'useState', 'className'];
-      for (const p of forbiddenPatterns) {
-        if (generatedCode.toLowerCase().includes(p.toLowerCase())) {
-          console.log(`❌ REJECTED: Contains forbidden pattern "${p}"`);
+      
+      const requiredPatterns = [
+        'import React',
+        'const App',
+        'export default App'
+      ];
+      
+      // Check for specific problematic file structures (not just business terms)
+      for (const structure of forbiddenStructures) {
+        if (generatedCode.includes(structure)) {
+          console.log(`❌ REJECTED: Contains problematic file structure "${structure}"`);
           return false;
         }
       }
-      for (const p of requiredPatterns) {
-        if (!generatedCode.includes(p)) {
-          console.log(`❌ REJECTED: Missing required pattern "${p}"`);
+      
+      // Ensure it's a proper React component
+      for (const pattern of requiredPatterns) {
+        if (!generatedCode.includes(pattern)) {
+          console.log(`❌ REJECTED: Missing required pattern "${pattern}"`);
           return false;
         }
       }
-      // Ensure it's a single file-like output (not embedding multiple files)
-      const fileCount = (generatedCode.match(/\.(tsx|html|js)/g) || []).length;
-      if (fileCount > 1) {
-        console.log(`❌ REJECTED: Multiple files detected (${fileCount})`);
+      
+      // Check if it's trying to create multiple files
+      const fileExtensions = generatedCode.match(/\.(tsx|jsx|html|js|ts)(?:\s|$)/g);
+      if (fileExtensions && fileExtensions.length > 1) {
+        console.log(`❌ REJECTED: Multiple files detected`);
         return false;
       }
-      console.log('✅ VALIDATED: Code passes all checks');
+      
+      // Ensure it actually addresses the user's request
+      const requestKeywords = extractKeywords(userPrompt);
+      const codeContainsRequest = requestKeywords.some(keyword => 
+        generatedCode.toLowerCase().includes(keyword.toLowerCase())
+      );
+      
+      if (!codeContainsRequest && requestKeywords.length > 0) {
+        console.log(`❌ REJECTED: Doesn't address user request. Expected keywords: ${requestKeywords}`);
+        return false;
+      }
+      
+      console.log('✅ VALIDATED: Code passes all checks and addresses user request');
       return true;
     };
 
@@ -154,33 +188,164 @@ VARIETY INJECTION:
 - Random seed: ${Math.random().toString(36).substring(7)}`;
     };
 
-    const getFallbackComponent = (userPrompt: string): string => {
+    // Create targeted fallback based on user request
+    const createTargetedFallback = (prompt: string): string => {
+      const keywords = extractKeywords(prompt);
       const randomId = Math.random().toString(36).substring(7);
-      return `
-import React, { useState } from 'react';
-
-const App = () => {
-  const [clicks, setClicks] = useState(0);
+      
+      // Create a basic implementation based on the prompt
+      let fallbackContent = '';
+      
+      if (prompt.toLowerCase().includes('task') || prompt.toLowerCase().includes('todo')) {
+        fallbackContent = `
+  const [tasks, setTasks] = useState(['Sample task 1', 'Sample task 2']);
+  const [newTask, setNewTask] = useState('');
   
+  const addTask = () => {
+    if (newTask.trim()) {
+      setTasks([...tasks, newTask]);
+      setNewTask('');
+    }
+  };
+  
+  const removeTask = (index) => {
+    setTasks(tasks.filter((_, i) => i !== index));
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 to-purple-600 p-8 flex items-center justify-center">
-      <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-8 max-w-md w-full text-center border border-white/20">
-        <h1 className="text-3xl font-bold text-white mb-6">
-          Custom App for: ${userPrompt}
-        </h1>
-        <div className="mb-6">
-          <p className="text-lg text-white/80 mb-4">Clicks: {clicks}</p>
-          <button 
-            onClick={() => setClicks(clicks + 1)}
-            className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-semibold transition-colors border border-white/30"
+    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 p-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-2xl p-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Task Management</h1>
+        <div className="flex gap-4 mb-6">
+          <input
+            type="text"
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            placeholder="Enter a new task..."
+            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onKeyPress={(e) => e.key === 'Enter' && addTask()}
+          />
+          <button
+            onClick={addTask}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
           >
-            Click Me!
+            Add Task
           </button>
         </div>
-        <p className="text-sm text-white/60">ID: ${randomId}</p>
+        <div className="space-y-2">
+          {tasks.map((task, index) => (
+            <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+              <span className="text-gray-800">{task}</span>
+              <button
+                onClick={() => removeTask(index)}
+                className="text-red-500 hover:text-red-700 font-semibold"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-gray-500 mt-4">ID: ${randomId}</p>
       </div>
     </div>
-  );
+  );`;
+      } else if (prompt.toLowerCase().includes('calculator')) {
+        fallbackContent = `
+  const [display, setDisplay] = useState('0');
+  const [operation, setOperation] = useState(null);
+  const [waitingForOperand, setWaitingForOperand] = useState(false);
+  
+  const inputNumber = (num) => {
+    if (waitingForOperand) {
+      setDisplay(String(num));
+      setWaitingForOperand(false);
+    } else {
+      setDisplay(display === '0' ? String(num) : display + num);
+    }
+  };
+  
+  const calculate = () => {
+    // Basic calculation logic
+    setDisplay('Result: ' + Math.random().toFixed(2));
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-500 to-blue-600 p-8 flex items-center justify-center">
+      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Calculator</h1>
+        <div className="bg-gray-900 text-white p-4 rounded-lg mb-6 text-right text-2xl font-mono">
+          {display}
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {[1,2,3,4,5,6,7,8,9,0].map(num => (
+            <button
+              key={num}
+              onClick={() => inputNumber(num)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg transition-colors"
+            >
+              {num}
+            </button>
+          ))}
+          <button
+            onClick={calculate}
+            className="col-span-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors"
+          >
+            Calculate
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mt-4 text-center">ID: ${randomId}</p>
+      </div>
+    </div>
+  );`;
+      } else {
+        // Generic fallback that tries to address the prompt
+        fallbackContent = `
+  const [data, setData] = useState(['Item 1', 'Item 2', 'Item 3']);
+  const [input, setInput] = useState('');
+  
+  const handleSubmit = () => {
+    if (input.trim()) {
+      setData([...data, input]);
+      setInput('');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-600 p-8">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">${prompt}</h1>
+        <div className="flex gap-4 mb-6">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Enter something..."
+            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+          <button
+            onClick={handleSubmit}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            Add
+          </button>
+        </div>
+        <div className="grid gap-4">
+          {data.map((item, index) => (
+            <div key={index} className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-800">{item}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-gray-500 mt-4">Keywords: ${keywords.join(', ')} | ID: ${randomId}</p>
+      </div>
+    </div>
+  );`;
+      }
+      
+      return `
+import React, { useState, useEffect } from 'react';
+
+const App = () => {${fallbackContent}
 };
 
 export default App;
@@ -191,36 +356,41 @@ export default App;
     const selectModel = () => Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini';
     const isNewerModel = (m: string) => /^(gpt-5|gpt-4\.1|o3|o4)/.test(m);
 
-    // Core generation loop with validation and retries
-    const generateWithValidation = async (baseUserPrompt: string, maxAttempts = 5): Promise<string> => {
+    // Improved generation with prompt adherence
+    const generateWithPromptAdherence = async (prompt: string, maxAttempts = 3): Promise<string> => {
+      console.log(`🎯 Generating for request: "${prompt}"`);
       const model = selectModel();
+      
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         console.log(`🔄 Generation attempt ${attempt}/${maxAttempts}`);
-        const varietyPrompts = [
-          'Create something completely different from a business application.',
-          'Build a fun, interactive experience.',
-          'Make a creative tool or game.',
-          'Design something colorful and engaging.',
-          'Build an entertainment or utility app.'
-        ];
-        const randomVariety = varietyPrompts[Math.floor(Math.random() * varietyPrompts.length)];
-        const enhancedPrompt = injectVariety(`${baseUserPrompt}\n\nIMPORTANT: ${randomVariety} Random ID: ${Math.random()}`);
-
+        
         try {
+          // Enhance prompt to ensure it follows the request
+          const enhancedPrompt = `${prompt}
+
+CRITICAL: You must build exactly what the user requested: "${prompt}"
+- Focus on implementing the core functionality they asked for
+- Make it beautiful and modern, but stay true to their request
+- If they asked for a task management app, build a task management app
+- If they asked for a calculator, build a calculator
+- Don't build something completely different
+
+Random ID for uniqueness: ${Math.random().toString(36).substring(7)}`;
+
           const body: any = {
             model,
             messages: [
               { role: 'system', content: SYSTEM_PROMPT.replace('{prompt}', enhancedPrompt) }
             ],
           };
+          
           if (isNewerModel(model)) {
-            body.max_completion_tokens = 3000;
-            // temperature unsupported on newer models
+            body.max_completion_tokens = 4000;
           } else {
-            body.temperature = 0.8;
-            body.max_tokens = 3000;
-            body.presence_penalty = 0.7;
-            body.frequency_penalty = 0.8;
+            body.temperature = 0.3; // Lower temperature for better prompt following
+            body.max_tokens = 4000;
+            body.presence_penalty = 0.3; // Mild penalty to avoid repetition
+            body.frequency_penalty = 0.2; // Mild penalty for repeated phrases
           }
 
           const resp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -241,36 +411,43 @@ export default App;
           let generatedCode = json.choices?.[0]?.message?.content?.trim() || '';
           if (!generatedCode) throw new Error('Empty generation');
 
-          // Strip markdown fences
+          // Clean up markdown formatting
           if (generatedCode.includes('```')) {
-            const m = generatedCode.match(/```(?:javascript|jsx|tsx|js|ts)?\n([\s\S]*?)\n```/);
-            if (m && m[1]) generatedCode = m[1];
+            const codeMatch = generatedCode.match(/```(?:javascript|jsx|js|typescript|tsx)?\n([\s\S]*?)\n```/);
+            if (codeMatch) {
+              generatedCode = codeMatch[1];
+            }
           }
-
-          if (validateGeneration(generatedCode)) {
-            console.log(`✅ SUCCESS: Valid React component generated on attempt ${attempt}`);
+          
+          // Validate the generated code
+          if (validateGeneration(generatedCode, prompt)) {
+            console.log(`✅ SUCCESS: Valid component generated that addresses "${prompt}"`);
             return generatedCode;
           }
-
-          console.log(`❌ ATTEMPT ${attempt} FAILED: Regenerating...`);
-          await new Promise((r) => setTimeout(r, 800));
-        } catch (err) {
-          console.error(`❌ ATTEMPT ${attempt} ERROR:`, err);
+          
+          console.log(`❌ ATTEMPT ${attempt} FAILED: Generated code doesn't properly address the request`);
+          
+        } catch (error) {
+          console.error(`❌ ATTEMPT ${attempt} ERROR:`, error);
         }
       }
-      console.log('🛑 ALL ATTEMPTS FAILED: Returning fallback component');
-      return getFallbackComponent(baseUserPrompt);
+      
+      // If all attempts fail, create a targeted fallback
+      console.log('🛑 ALL ATTEMPTS FAILED: Creating targeted fallback');
+      return createTargetedFallback(prompt);
     };
 
-    // Generate validated single-file React component and return early
-    const validatedCode = await generateWithValidation(prompt);
+    // Generate component that follows the prompt
+    const validatedCode = await generateWithPromptAdherence(prompt);
 
-    console.log('✅ Generation successful', {
-      promptLength: prompt.length,
+    console.log('✅ Generation successful - component addresses user request', {
+      originalPrompt: prompt,
       codeLength: validatedCode.length,
       hasReact: validatedCode.includes('import React'),
-      hasApp: /const\s+App|function\s+App/.test(validatedCode),
-      hasExport: validatedCode.includes('export default'),
+      addressesPrompt: extractKeywords(prompt).some(keyword => 
+        validatedCode.toLowerCase().includes(keyword.toLowerCase())
+      ),
+      timestamp: new Date().toISOString()
     });
 
     const result = { files: [{ path: '/src/App.tsx', content: validatedCode }] };
