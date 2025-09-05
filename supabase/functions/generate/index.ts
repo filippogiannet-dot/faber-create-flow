@@ -251,19 +251,22 @@ export default App;
       return getFallbackComponent(baseUserPrompt);
     };
 
-    // Build contextual prompt to prevent repetitive content
-    const sessionHistory = []; // TODO: Add session tracking
-    const avoidPatterns = sessionHistory.length > 0 
-      ? `\nIMPORTANT: Avoid generating similar patterns to previous requests: ${sessionHistory.join(', ')}`
-      : '';
-      
-    const uniquenessPrompt = `\nCREATE SOMETHING UNIQUE: This should be completely different from typical CRM/dashboard applications. Be creative and original.${avoidPatterns}`;
-    
-    const enhancedPrompt = `${prompt}${uniquenessPrompt}
+    // Generate validated single-file React component and return early
+    const validatedCode = await generateWithValidation(prompt);
 
-IMPORTANT: Make it visually stunning with modern design, smooth animations, and perfect user experience. Include all necessary functionality and make it production-ready.`;
+    console.log('✅ Generation successful', {
+      promptLength: prompt.length,
+      codeLength: validatedCode.length,
+      hasReact: validatedCode.includes('import React'),
+      hasApp: /const\s+App|function\s+App/.test(validatedCode),
+      hasExport: validatedCode.includes('export default'),
+    });
 
-    const appSpecSystemPrompt = systemPrompt;
+    const result = { files: [{ path: '/src/App.tsx', content: validatedCode }] };
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

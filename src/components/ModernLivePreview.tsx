@@ -13,10 +13,36 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
   const [error, setError] = useState<string | null>(null);
   const [renderTime, setRenderTime] = useState<number | null>(null);
 
+  // Sanitize generated code for in-iframe execution (no imports/exports)
+  const sanitizeAppCode = (code: string) => {
+    try {
+      let out = code
+        // Remove import lines
+        .replace(/^\s*import[^;]*;\s*$/gm, '')
+        // Convert "export default function App" to plain function
+        .replace(/export\s+default\s+function\s+App\s*\(/, 'function App(')
+        // Convert "export default const App =" style
+        .replace(/export\s+default\s+const\s+App\s*=\s*/, 'const App = ')
+        // Drop any remaining export default statements
+        .replace(/export\s+default\s+App\s*;?/g, '')
+        // Remove type annotations (simple cases)
+        .replace(/: \w+[\[\]<>\|\s\w,?]*/g, '')
+        .replace(/<[^>]+>\s*\(/g, '(');
+      // Expose App on window so preview can render it
+      if (!/window\.App\s*=\s*App/.test(out)) {
+        out += "\n\n;window.App = App;";
+      }
+      return out;
+    } catch {
+      return code + "\n;window.App = App;";
+    }
+  };
+
   const createPreviewHTML = (files: Array<{ path: string; content: string }>) => {
     // Find the main App component
     const appFile = files.find(f => f.path.includes('App.tsx') || f.path.includes('app.tsx'));
     const appCode = appFile?.content || '';
+    const sanitizedCode = sanitizeAppCode(appCode);
 
     return `
 <!DOCTYPE html>
@@ -103,7 +129,7 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel">
+  <script type="text/babel" data-presets="react,typescript">
     console.log('Babel script starting...');
     const { useState, useEffect, useRef, useCallback, useMemo } = React;
     const startTime = performance.now();
@@ -244,7 +270,7 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
 
     try {
       console.log('Starting component compilation...');
-      ${appCode}
+      ${sanitizedCode}
       
       console.log('App component defined, creating root...');
       const root = ReactDOM.createRoot(document.getElementById('root'));
