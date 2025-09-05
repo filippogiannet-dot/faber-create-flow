@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot, CheckCircle, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { ModernLivePreview } from "@/components/ModernLivePreview";
+import LivePreview from "@/components/ModernLivePreview";
 import CodeEditor from "@/components/CodeEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -396,13 +396,15 @@ export default function Editor() {
                     </div>
                   }
                 >
-                  <ModernLivePreview 
-                    files={generatedFiles} 
+                  <LivePreview 
+                    code={(generatedFiles.find(f => f.path.toLowerCase().endsWith('app.tsx'))?.content) || `import React from 'react';\nconst App = () => <div className="min-h-screen grid place-items-center bg-black text-white p-8">No App.tsx found</div>;\nexport default App;`}
                     onError={(error) => {
                       setValidationStatus({ isValid: false, errors: [{ message: error, severity: 'error' }] });
                       addChatMessage(`❌ Preview Error: ${error}`, 'status');
                     }}
-                    className="flex-1 h-full"
+                    onSuccess={() => {
+                      setValidationStatus({ isValid: true, errors: [] });
+                    }}
                   />
                 </ErrorBoundary>
               </div>
