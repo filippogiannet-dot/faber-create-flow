@@ -93,6 +93,7 @@ export default function LivePreview({ files, onValidationChange }: LivePreviewPr
         --border: 222 43% 15%;
         --radius: 0.75rem;
       }
+      html, body, #root { height: 100%; min-height: 100vh; }
       body { 
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         margin: 0;
@@ -191,9 +192,8 @@ export class ErrorBoundary extends Component<Props, State> {
     --ring: 217 91% 85%;
     --radius: 0.75rem;
   }
-  
+  html, body, #root { height: 100%; min-height: 100vh; }
   * { @apply border-border; }
-  
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
