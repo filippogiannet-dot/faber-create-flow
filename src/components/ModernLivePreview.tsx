@@ -30,28 +30,41 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
   <script src="https://unpkg.com/@babel/standalone@7.23.4/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    console.log('Preview iframe loaded');
+    
     // Configure Tailwind
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            primary: {
-              50: '#eff6ff',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              900: '#1e3a8a'
-            },
-            secondary: {
-              50: '#f8fafc',
-              100: '#f1f5f9',
-              500: '#64748b',
-              600: '#475569'
-            }
+            primary: { 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+            secondary: { 100: '#f1f5f9', 500: '#64748b', 600: '#475569' },
+            green: { 500: '#10b981', 600: '#059669' },
+            red: { 500: '#ef4444', 600: '#dc2626' },
+            yellow: { 400: '#facc15' },
+            gray: { 50: '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db', 400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151', 800: '#1f2937', 900: '#111827' }
           }
         }
       }
     }
+    
+    // Global error handler
+    window.addEventListener('error', (e) => {
+      console.error('Global error:', e.error);
+      window.parent.postMessage({ 
+        type: 'PREVIEW_ERROR', 
+        error: \`Global Error: \${e.error?.message || e.message}\`
+      }, '*');
+    });
+    
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('Unhandled promise rejection:', e.reason);
+      window.parent.postMessage({ 
+        type: 'PREVIEW_ERROR', 
+        error: \`Promise Rejection: \${e.reason?.message || e.reason}\`
+      }, '*');
+    });
   </script>
   <style>
     body { 
@@ -91,11 +104,15 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
 <body>
   <div id="root"></div>
   <script type="text/babel">
+    console.log('Babel script starting...');
     const { useState, useEffect, useRef, useCallback, useMemo } = React;
     const startTime = performance.now();
     
-    // Mock shadcn/ui components for preview
-    const Button = ({ children, className = "", onClick, variant = "default", size = "default", ...props }) => {
+    // Signal that script has started
+    window.parent.postMessage({ type: 'PREVIEW_SCRIPT_START' }, '*');
+    
+    // Mock shadcn/ui components with better error handling
+    const Button = ({ children, className = "", onClick, variant = "default", size = "default", disabled = false, ...props }) => {
       const baseClasses = "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
       
       const variants = {
@@ -115,8 +132,9 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
       };
       
       return React.createElement('button', {
-        className: \`\${baseClasses} \${variants[variant]} \${sizes[size]} \${className}\`,
-        onClick,
+        className: \`\${baseClasses} \${variants[variant] || variants.default} \${sizes[size] || sizes.default} \${className}\`,
+        onClick: onClick || (() => {}),
+        disabled,
         ...props
       }, children);
     };
@@ -225,26 +243,30 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
     );
 
     try {
+      console.log('Starting component compilation...');
       ${appCode}
       
+      console.log('App component defined, creating root...');
       const root = ReactDOM.createRoot(document.getElementById('root'));
       
-      // Render with error boundary
+      // Enhanced Error Boundary
       const ErrorBoundary = class extends React.Component {
         constructor(props) {
           super(props);
-          this.state = { hasError: false, error: null };
+          this.state = { hasError: false, error: null, errorInfo: null };
         }
         
         static getDerivedStateFromError(error) {
+          console.error('Error boundary caught error:', error);
           return { hasError: true, error };
         }
         
         componentDidCatch(error, errorInfo) {
-          console.error('Component error:', error, errorInfo);
+          console.error('Component error details:', error, errorInfo);
+          this.setState({ errorInfo });
           window.parent.postMessage({ 
             type: 'PREVIEW_ERROR', 
-            error: \`\${error.message}\\n\\nStack: \${error.stack}\` 
+            error: \`Component Error: \${error.message}\\n\\nComponent Stack: \${errorInfo.componentStack}\\n\\nError Stack: \${error.stack}\`
           }, '*');
         }
         
@@ -253,15 +275,18 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
             return React.createElement('div', { 
               className: 'min-h-screen flex items-center justify-center bg-gray-900 p-6' 
             }, React.createElement('div', {
-              className: 'bg-red-900/20 border border-red-500/50 rounded-lg p-8 max-w-md w-full text-center'
+              className: 'bg-red-900/20 border border-red-500/50 rounded-lg p-8 max-w-2xl w-full'
             }, [
-              React.createElement('div', { className: 'text-red-400 text-6xl mb-4', key: 'icon' }, '⚠️'),
-              React.createElement('h2', { className: 'text-xl font-semibold text-white mb-2', key: 'title' }, 'Component Error'),
-              React.createElement('p', { className: 'text-gray-300 mb-4 text-sm', key: 'message' }, this.state.error?.message || 'Something went wrong'),
+              React.createElement('div', { className: 'text-red-400 text-6xl mb-4 text-center', key: 'icon' }, '⚠️'),
+              React.createElement('h2', { className: 'text-xl font-semibold text-white mb-2 text-center', key: 'title' }, 'Component Error'),
+              React.createElement('div', { className: 'text-gray-300 mb-4 text-sm font-mono bg-gray-800 p-3 rounded overflow-auto max-h-40', key: 'message' }, this.state.error?.message || 'Something went wrong'),
               React.createElement('button', {
                 key: 'retry',
-                className: 'bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md transition-colors',
-                onClick: () => this.setState({ hasError: false, error: null })
+                className: 'w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md transition-colors',
+                onClick: () => {
+                  this.setState({ hasError: false, error: null, errorInfo: null });
+                  window.location.reload();
+                }
               }, 'Retry')
             ]));
           }
@@ -270,24 +295,43 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
         }
       };
       
+      // App Component with better fallback
       const AppComponent = () => {
-        const AppToRender = App || (() => React.createElement('div', { 
-          className: 'min-h-screen flex items-center justify-center bg-gray-900' 
-        }, React.createElement('div', {
-          className: 'text-center text-white'
-        }, [
-          React.createElement('div', { className: 'text-6xl mb-4', key: 'icon' }, '🚀'),
-          React.createElement('h1', { className: 'text-2xl font-bold mb-2', key: 'title' }, 'App Generated!'),
-          React.createElement('p', { className: 'text-gray-400', key: 'desc' }, 'Your React component is ready')
-        ])));
-        
-        return React.createElement(ErrorBoundary, {}, React.createElement(AppToRender));
+        try {
+          const AppToRender = window.App || App || (() => {
+            console.warn('No App component found, using fallback');
+            return React.createElement('div', { 
+              className: 'min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700' 
+            }, React.createElement('div', {
+              className: 'text-center text-white'
+            }, [
+              React.createElement('div', { className: 'text-6xl mb-4', key: 'icon' }, '🚀'),
+              React.createElement('h1', { className: 'text-3xl font-bold mb-2', key: 'title' }, 'Component Generated!'),
+              React.createElement('p', { className: 'text-blue-200', key: 'desc' }, 'Your React component is ready to preview')
+            ]));
+          });
+          
+          console.log('Rendering App component...');
+          return React.createElement(ErrorBoundary, {}, React.createElement(AppToRender));
+        } catch (err) {
+          console.error('Error in AppComponent:', err);
+          return React.createElement('div', {
+            className: 'min-h-screen flex items-center justify-center bg-red-900 text-white p-6'
+          }, React.createElement('div', {
+            className: 'text-center'
+          }, [
+            React.createElement('h2', { key: 'title' }, 'Render Error'),
+            React.createElement('p', { key: 'msg' }, err.message)
+          ]));
+        }
       };
       
       root.render(React.createElement(AppComponent));
       
       // Signal successful render
       const renderTime = performance.now() - startTime;
+      console.log(\`Render completed in \${renderTime}ms\`);
+      
       setTimeout(() => {
         window.parent.postMessage({ 
           type: 'PREVIEW_READY', 
@@ -295,30 +339,43 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
         }, '*');
         
         // Show success notification
-        const successEl = document.createElement('div');
-        successEl.className = 'success';
-        successEl.innerHTML = \`✅ Rendered in \${Math.round(renderTime)}ms\`;
-        document.body.appendChild(successEl);
-        
-        setTimeout(() => {
-          if (successEl.parentNode) {
-            successEl.parentNode.removeChild(successEl);
-          }
-        }, 3000);
+        try {
+          const successEl = document.createElement('div');
+          successEl.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse';
+          successEl.innerHTML = \`✅ Rendered in \${Math.round(renderTime)}ms\`;
+          document.body.appendChild(successEl);
+          
+          setTimeout(() => {
+            if (successEl.parentNode) {
+              successEl.parentNode.removeChild(successEl);
+            }
+          }, 3000);
+        } catch (notificationError) {
+          console.warn('Could not show success notification:', notificationError);
+        }
       }, 100);
       
     } catch (error) {
-      console.error('Render error:', error);
+      console.error('Critical render error:', error);
       document.getElementById('root').innerHTML = \`
-        <div class="error">
-          <strong>Render Error:</strong> \${error.message}
-          <br><br>
-          <small>Check console for details</small>
+        <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #1f2937; color: white; padding: 2rem;">
+          <div style="text-align: center; max-width: 600px;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">💥</div>
+            <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Critical Render Error</h2>
+            <div style="background: #374151; padding: 1rem; border-radius: 0.5rem; font-family: monospace; font-size: 0.875rem; margin-bottom: 1rem; text-align: left; overflow: auto; max-height: 200px;">
+              \${error.message}
+              <br><br>
+              Stack: \${error.stack}
+            </div>
+            <button onclick="window.location.reload()" style="background: #dc2626; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.25rem; cursor: pointer;">
+              Reload Preview
+            </button>
+          </div>
         </div>
       \`;
       window.parent.postMessage({ 
         type: 'PREVIEW_ERROR', 
-        error: \`\${error.message}\\n\\nStack: \${error.stack}\`
+        error: \`Critical Error: \${error.message}\\n\\nStack: \${error.stack}\`
       }, '*');
     }
   </script>
@@ -335,21 +392,29 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
     setRenderTime(null);
 
     const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-      setError('Preview timeout - component took too long to load');
-      onError?.('Preview timeout - component took too long to load');
-    }, 15000);
+      if (isLoading) {
+        setIsLoading(false);
+        setError('Preview timeout - check console for errors');
+        console.error('Preview timeout after 10 seconds');
+        onError?.('Preview timeout - check console for errors');
+      }
+    }, 10000); // Reduced to 10 seconds
 
     const handleMessage = (event: MessageEvent) => {
       if (event.source !== iframe.contentWindow) return;
       
+      console.log('Preview message received:', event.data);
       clearTimeout(timeoutId);
       
-      if (event.data.type === 'PREVIEW_READY') {
+      if (event.data.type === 'PREVIEW_SCRIPT_START') {
+        console.log('Preview script started successfully');
+      } else if (event.data.type === 'PREVIEW_READY') {
+        console.log('Preview ready with render time:', event.data.renderTime);
         setIsLoading(false);
         setError(null);
         setRenderTime(event.data.renderTime || null);
       } else if (event.data.type === 'PREVIEW_ERROR') {
+        console.error('Preview error received:', event.data.error);
         setIsLoading(false);
         setError(event.data.error);
         onError?.(event.data.error);
@@ -359,9 +424,28 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
     window.addEventListener('message', handleMessage);
     
     try {
+      console.log('Creating preview HTML for', files.length, 'files');
       const previewHTML = createPreviewHTML(files);
+      console.log('Setting iframe srcdoc...');
       iframe.srcdoc = previewHTML;
+      
+      // Fallback: if srcdoc fails, try src with data URL
+      setTimeout(() => {
+        if (isLoading) {
+          console.log('Srcdoc seems to be taking too long, trying data URL fallback...');
+          try {
+            const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(previewHTML);
+            iframe.src = dataUrl;
+          } catch (dataUrlError) {
+            console.error('Data URL fallback failed:', dataUrlError);
+            setError('Failed to load preview - both srcdoc and data URL methods failed');
+            setIsLoading(false);
+          }
+        }
+      }, 5000);
+      
     } catch (err) {
+      console.error('Error creating preview HTML:', err);
       setIsLoading(false);
       setError(err instanceof Error ? err.message : 'Failed to create preview');
     }
