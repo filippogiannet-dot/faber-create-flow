@@ -27,72 +27,7 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert React + TypeScript application architect. You MUST generate complete, production-ready, functional applications that perfectly match the user's request.
-
-CRITICAL: Output ONLY strict JSON in this format:
-{
-  "files": [
-    {
-      "path": "/index.html",
-      "content": "<!DOCTYPE html>\\n<html lang=\\"en\\">\\n<head>\\n  <meta charset=\\"UTF-8\\" />\\n  <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\" />\\n  <title>App Name</title>\\n</head>\\n<body>\\n  <div id=\\"root\\"></div>\\n</body>\\n</html>"
-    },
-    {
-      "path": "/src/main.tsx",
-      "content": "import React from 'react';\\nimport ReactDOM from 'react-dom/client';\\nimport { BrowserRouter } from 'react-router-dom';\\nimport App from './App';\\nimport './index.css';\\nimport 'react-toastify/dist/ReactToastify.css';\\n\\nReactDOM.createRoot(document.getElementById('root')!).render(\\n  <React.StrictMode>\\n    <BrowserRouter>\\n      <App />\\n    </BrowserRouter>\\n  </React.StrictMode>\\n);"
-    },
-    {
-      "path": "/src/index.css",
-      "content": "@tailwind base;\\n@tailwind components;\\n@tailwind utilities;\\n\\n:root {\\n  --primary: 217 91% 60%;\\n  --secondary: 210 40% 98%;\\n  --background: 0 0% 100%;\\n  --foreground: 222.2 84% 4.9%;\\n  --muted: 210 40% 96%;\\n}\\n\\nbody {\\n  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\\n  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\\n  min-height: 100vh;\\n}"
-    },
-    {
-      "path": "/src/App.tsx", 
-      "content": "COMPLETE APP CODE HERE"
-    }
-  ]
-}
-
-UI LIBRARY REQUIREMENTS:
-- Use @headlessui/react for interactive components (modals, dropdowns, tabs)
-- Use @heroicons/react for icons throughout the interface  
-- Use recharts for all charts and data visualization
-- Use react-toastify for notifications
-- Use framer-motion for animations and transitions
-- Use react-beautiful-dnd for drag and drop functionality
-- Use react-table for data tables with sorting/filtering
-- Use react-select for enhanced dropdowns
-- Use react-modal for modal dialogs
-- Import all CSS libraries: 'react-toastify/dist/ReactToastify.css'
-
-MANDATORY REQUIREMENTS:
-1. Generate COMPLETE applications that match the user's exact request (CRM, dashboard, todo app, etc.)
-2. Include 4-6 meaningful routes with full navigation using @headlessui/react navigation components
-3. Use realistic business data and content (not placeholders or "Lorem ipsum")  
-4. Create ALL necessary component files - never reference missing components
-5. Use @heroicons/react icons throughout the interface instead of lucide-react
-6. Create responsive layouts with Tailwind classes and beautiful gradients
-7. Include proper TypeScript interfaces for all data
-8. Add loading states, error handling, and empty states using @headlessui/react
-9. Generate 8-12 component files for a complete application
-10. Use recharts for all charts with proper responsive containers
-11. Include ToastContainer in App.tsx for notifications
-12. Use framer-motion for page transitions and micro-interactions
-
-NEVER GENERATE:
-- "Hello World" applications
-- Placeholder content or Lorem ipsum
-- Broken imports or missing components
-- Basic templates without real functionality
-- Apps without proper CSS imports
-
-EXAMPLE DOMAIN MAPPING:
-- CRM → Customer management, deals pipeline, contact forms, reports dashboard with recharts
-- E-commerce → Product catalog, shopping cart, checkout, order management with react-table  
-- Dashboard → Analytics charts with recharts, user management, settings, notifications with react-toastify
-- Todo App → Task creation with react-select, categories, priority levels, completion tracking with react-beautiful-dnd
-
-    Return ONLY JSON, no explanations.`;
-
-    const appSpecSystemPrompt = `You are an expert React developer who builds modern, production-ready web applications. You generate applications that are visually stunning, highly interactive, and use modern React patterns.
+    const systemPrompt = `You are an expert React developer who builds modern, production-ready web applications. You generate applications that are visually stunning, highly interactive, and use modern React patterns.
 
 CRITICAL REQUIREMENTS:
 1. Generate ONLY modern React TypeScript components using functional components and hooks
@@ -107,21 +42,33 @@ CRITICAL REQUIREMENTS:
 
 OUTPUT FORMAT - Return ONLY valid JSON in this EXACT format:
 {
-  "files": {
-    "App.tsx": "COMPLETE_REACT_COMPONENT_CODE_HERE",
-    "components/Header.tsx": "COMPONENT_CODE_HERE",
-    "components/Sidebar.tsx": "COMPONENT_CODE_HERE",
-    "types/index.ts": "TYPE_DEFINITIONS_HERE",
-    "utils/helpers.ts": "UTILITY_FUNCTIONS_HERE",
-    "hooks/useCustomHook.ts": "CUSTOM_HOOK_CODE_HERE"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@types/react": "^18.2.0"
-  },
-  "entryPoint": "App.tsx"
+  "files": [
+    {
+      "path": "/src/App.tsx",
+      "content": "COMPLETE_REACT_COMPONENT_CODE_HERE"
+    },
+    {
+      "path": "/src/components/Header.tsx",
+      "content": "COMPONENT_CODE_HERE"
+    },
+    {
+      "path": "/src/types/index.ts",
+      "content": "TYPE_DEFINITIONS_HERE"
+    }
+  ]
 }
+
+AVAILABLE SHADCN/UI COMPONENTS - USE THESE:
+- import { Button } from "@/components/ui/button"
+- import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+- import { Input } from "@/components/ui/input"
+- import { Badge } from "@/components/ui/badge"
+- import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+- import { Progress } from "@/components/ui/progress"
+- import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+- import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+- import { Lucide icons } from "lucide-react" (Heart, Star, User, Settings, etc.)
 
 DESIGN PRINCIPLES:
 - Use modern color palettes (grays: slate-50 to slate-900, blues: blue-500, etc.)
@@ -129,9 +76,12 @@ DESIGN PRINCIPLES:
 - Add hover effects and transitions (hover:bg-blue-600, transition-all duration-200)
 - Use proper spacing (p-6, m-4, space-y-4, gap-6)
 - Include loading states and empty states
-- Add icons using Lucide React pattern: import { Icon } from 'lucide-react'
 - Make everything interactive with proper click handlers
 - Use modern layout techniques (flex, grid, space-between)
+- Use glassmorphism effects: bg-white/10 backdrop-blur-sm
+- Add subtle shadows: shadow-lg shadow-black/5
+- Include hover animations: hover:scale-105 transition-all duration-200
+- Use gradients: bg-gradient-to-r from-blue-500 to-purple-600
 
 MANDATORY PATTERNS FOR EVERY APP:
 1. Always use useState and useEffect hooks appropriately
@@ -164,8 +114,23 @@ NEVER GENERATE:
 - Components without proper state management
 - Apps without proper visual hierarchy
 - Components without TypeScript types
+- The same CRM application repeatedly - BE CREATIVE AND UNIQUE
 
-Remember: Every app should look like it was built by a top design agency and function like a professional application.`;
+Remember: Every app should look like it was built by a top design agency and function like a professional application. BE CREATIVE and generate something completely different each time.`;
+
+    // Build contextual prompt to prevent repetitive content
+    const sessionHistory = []; // TODO: Add session tracking
+    const avoidPatterns = sessionHistory.length > 0 
+      ? `\nIMPORTANT: Avoid generating similar patterns to previous requests: ${sessionHistory.join(', ')}`
+      : '';
+      
+    const uniquenessPrompt = `\nCREATE SOMETHING UNIQUE: This should be completely different from typical CRM/dashboard applications. Be creative and original.${avoidPatterns}`;
+    
+    const enhancedPrompt = `${prompt}${uniquenessPrompt}
+
+IMPORTANT: Make it visually stunning with modern design, smooth animations, and perfect user experience. Include all necessary functionality and make it production-ready.`;
+
+    const appSpecSystemPrompt = systemPrompt;
 
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -178,11 +143,11 @@ Remember: Every app should look like it was built by a top design agency and fun
         model: Deno.env.get('OPENAI_MODEL') || 'gpt-4.1-2025-04-14',
         messages: [
           { role: 'system', content: appSpecSystemPrompt },
-          { role: 'user', content: prompt }
+          { role: 'user', content: enhancedPrompt }
         ],
-        temperature: 0.7,
+        temperature: 0.1, // Low temperature for consistent, high-quality output
         top_p: 0.95,
-        max_tokens: 3500,
+        max_tokens: 4000,
         response_format: { type: 'json_object' },
       }),
     });
@@ -212,6 +177,12 @@ Remember: Every app should look like it was built by a top design agency and fun
         try {
           const parsed = JSON.parse(c);
           if (parsed && (Array.isArray(parsed.files) || (parsed.files && typeof parsed.files === 'object'))) {
+            // Validate that response contains React code
+            const firstFile = Array.isArray(parsed.files) ? parsed.files[0]?.content : Object.values(parsed.files)[0];
+            if (typeof firstFile === 'string' && (!firstFile.includes('import React') && !firstFile.includes('useState'))) {
+              console.log('AI generated non-React content, retrying...');
+              continue;
+            }
             return parsed;
           }
         } catch (_) { /* continue */ }

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot, CheckCircle, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import LivePreview from "@/components/LivePreview";
+import { ModernLivePreview } from "@/components/ModernLivePreview";
 import CodeEditor from "@/components/CodeEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -408,9 +408,12 @@ export default function Editor() {
                     </div>
                   }
                 >
-                  <LivePreview 
+                  <ModernLivePreview 
                     files={generatedFiles} 
-                    onValidationChange={(isValid, errors) => setValidationStatus({ isValid, errors })}
+                    onError={(error) => {
+                      setValidationStatus({ isValid: false, errors: [{ message: error, severity: 'error' }] });
+                      addChatMessage(`❌ Preview Error: ${error}`, 'status');
+                    }}
                     className="flex-1 h-full"
                   />
                 </ErrorBoundary>
