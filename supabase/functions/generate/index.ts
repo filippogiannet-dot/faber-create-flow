@@ -175,14 +175,15 @@ Remember: Every app should look like it was built by a top design agency and fun
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: Deno.env.get('OPENAI_MODEL') || 'gpt-4.1-2025-04-14',
         messages: [
           { role: 'system', content: appSpecSystemPrompt },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 4096,
-        temperature: 0.8,
+        temperature: 0.7,
         top_p: 0.95,
+        max_tokens: 3500,
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -210,7 +211,7 @@ Remember: Every app should look like it was built by a top design agency and fun
       for (const c of candidates) {
         try {
           const parsed = JSON.parse(c);
-          if (parsed && Array.isArray(parsed.files)) {
+          if (parsed && (Array.isArray(parsed.files) || (parsed.files && typeof parsed.files === 'object'))) {
             return parsed;
           }
         } catch (_) { /* continue */ }
