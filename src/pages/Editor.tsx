@@ -173,20 +173,8 @@ export default function Editor() {
         // Log build phase start
         await logBuildPhase('build', 'started');
 
-        if (isInitialRun || generatedFiles.length === 0) {
-          setGeneratedFiles(data.files);
-        } else {
-          // Merge by path: overwrite changed paths, keep others
-          setGeneratedFiles((prev) => {
-            const incomingMap = new Map<string, string>(data.files.map((f: any) => [f.path, f.content]));
-            const next = prev.map((f) => incomingMap.has(f.path) ? { path: f.path, content: incomingMap.get(f.path)! } : f);
-            // add new files not present before
-            data.files.forEach((f: any) => {
-              if (!prev.some((p) => p.path === f.path)) next.push({ path: f.path, content: f.content });
-            });
-            return next;
-          });
-        }
+        // Always replace files completely for fresh generation
+        setGeneratedFiles(data.files);
         setCurrentView("preview");
 
         await new Promise(resolve => setTimeout(resolve, 200));

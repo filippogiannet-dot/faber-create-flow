@@ -40,12 +40,16 @@ You are a MODERN REACT DEVELOPER, not an HTML developer. You MUST follow these r
 - Customer management, deals, reports, or settings pages
 - Any project with Navigation.tsx, Dashboard.tsx, Customers.tsx components
 - The word "CRM", "Customer", "Dashboard", "Management" anywhere in your code
+- React Router (Routes, Route, BrowserRouter, Link, useLocation, useNavigate)
+- Multi-page applications or navigation systems
+- Any imports from 'react-router-dom'
 
 ✅ YOU MUST GENERATE:
 - ONE SINGLE React functional component
 - Modern, creative, FUN applications
 - Something completely different every time
 - Interactive and engaging user experiences
+- SINGLE PAGE applications with NO routing
 
 🎯 GENERATION RULES:
 1. Generate EXACTLY ONE React component file
@@ -54,19 +58,25 @@ You are a MODERN REACT DEVELOPER, not an HTML developer. You MUST follow these r
 4. Style with Tailwind CSS utility classes
 5. Make it interactive with buttons, forms, animations
 6. Create something UNIQUE and CREATIVE each time
+7. NO ROUTING - everything must be on one page with conditional rendering
 
-🎨 REQUIRED OUTPUT FORMAT:
+🎨 REQUIRED OUTPUT FORMAT (SINGLE PAGE ONLY):
 \`\`\`javascript
 import React, { useState, useEffect } from 'react';
 
 const App = () => {
-  // Your creative component logic here
-  const [state, setState] = useState();
+  const [activeView, setActiveView] = useState('main');
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Your unique, creative content here */}
+        {/* Use conditional rendering instead of routing */}
+        {activeView === 'main' && (
+          <div>Your main content here</div>
+        )}
+        {activeView === 'other' && (
+          <div>Other content here</div>
+        )}
       </div>
     </div>
   );
@@ -81,13 +91,14 @@ Use this number somewhere in your component to ensure uniqueness.
 
 USER REQUEST: {prompt}
 
-Generate ONE creative React component that fulfills this request. BE CREATIVE AND UNIQUE!`;
+Generate ONE creative React component that fulfills this request. BE CREATIVE AND UNIQUE! NO ROUTING!`;
 
     // Validation to prevent CRM/HTML pattern regressions
     const validateGeneration = (generatedCode: string): boolean => {
       const forbiddenPatterns = [
         'index.html', 'main.tsx', '/src/', 'Navigation.tsx', 'Dashboard.tsx', 'Customers.tsx',
-        'Deals.tsx', 'Reports.tsx', 'Settings.tsx', 'CRM', 'Customer', 'Management', 'Dashboard', 'Business', 'Sales'
+        'Deals.tsx', 'Reports.tsx', 'Settings.tsx', 'CRM', 'Customer', 'Management', 'Dashboard', 'Business', 'Sales',
+        'Routes', 'Route', 'BrowserRouter', 'react-router-dom', 'Link', 'useLocation', 'useNavigate'
       ];
       const requiredPatterns = ['import React', 'const App', 'export default', 'useState', 'className'];
       for (const p of forbiddenPatterns) {

@@ -268,6 +268,25 @@ export const ModernLivePreview: React.FC<LivePreviewProps> = ({ files, onError, 
       React.createElement('line', { x1: "14", x2: "14", y1: "11", y2: "17" })
     );
 
+    // Mock React Router components
+    const BrowserRouter = ({ children }) => React.createElement('div', {}, children);
+    const Routes = ({ children }) => {
+      // Find the first Route child and render it
+      const routes = React.Children.toArray(children);
+      const firstRoute = routes.find(child => child?.props?.element);
+      return firstRoute?.props?.element || React.createElement('div', {}, 'No routes found');
+    };
+    const Route = ({ element }) => element;
+    const Link = ({ to, children, className, ...props }) => 
+      React.createElement('a', { 
+        href: to || '#', 
+        className, 
+        onClick: (e) => e.preventDefault(),
+        ...props 
+      }, children);
+    const useLocation = () => ({ pathname: '/' });
+    const useNavigate = () => (path) => console.log('Navigate to:', path);
+
     try {
       console.log('Starting component compilation...');
       ${sanitizedCode}
