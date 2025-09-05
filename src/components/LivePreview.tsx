@@ -12,6 +12,7 @@ interface FileData {
 interface LivePreviewProps {
   files: FileData[];
   onValidationChange?: (isValid: boolean, errors: any[]) => void;
+  className?: string;
 }
 
 interface ValidationStatus {
@@ -20,7 +21,7 @@ interface ValidationStatus {
   lastCheck: Date | null;
 }
 
-export default function LivePreview({ files, onValidationChange }: LivePreviewProps) {
+export default function LivePreview({ files, onValidationChange, className }: LivePreviewProps) {
   const [sandpackFiles, setSandpackFiles] = useState<Record<string, { code: string }>>({});
   const [validation, setValidation] = useState<ValidationStatus>({
     status: 'idle',
@@ -611,7 +612,7 @@ export function cn(...inputs: ClassValue[]) {
   };
 
   return (
-    <div className="flex-1 min-h-0 w-full h-full flex flex-col bg-black">
+    <div className={`flex flex-col flex-1 min-h-0 w-full bg-black ${className ?? ''}`}>
       <StatusBar />
       <SandpackProvider
         template="react-ts"
@@ -628,11 +629,10 @@ export function cn(...inputs: ClassValue[]) {
           recompileDelay: 100
         }}
       >
-        <SandpackLayout className="flex-1" style={{ height: "100%", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
-          <div className="relative h-full w-full">
+        <SandpackLayout className="flex-1 min-h-0" style={{ width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
+          <div className="relative flex-1 min-h-0 w-full">
             <SandpackPreview
               style={{
-                height: "100%",
                 width: "100%",
                 flex: 1,
                 backgroundColor: "hsl(0 0% 0%)",
