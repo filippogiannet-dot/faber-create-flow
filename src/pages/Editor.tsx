@@ -411,6 +411,7 @@ export default function Editor() {
                   <LivePreview 
                     files={generatedFiles} 
                     onValidationChange={(isValid, errors) => setValidationStatus({ isValid, errors })}
+                    className="flex-1 h-full"
                   />
                 </ErrorBoundary>
               </div>
