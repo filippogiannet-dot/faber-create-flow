@@ -238,6 +238,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     if (!files || files.length === 0) {
       setSandpackFiles({
         "/index.html": { code: defaultIndexHtml },
+        "/src/index.css": { code: mainIndexCss },
         "/src/main.tsx": { code: ensureMain('./App') },
         "/src/index.tsx": { code: ensureMain('./App') },
         "/src/App.tsx": { code: defaultAppTsx },
