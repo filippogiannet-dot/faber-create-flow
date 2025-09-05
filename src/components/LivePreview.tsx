@@ -555,7 +555,7 @@ export function cn(...inputs: ClassValue[]) {
   };
 
   return (
-    <div className="h-full w-full bg-black relative flex flex-col">
+    <div className="absolute inset-0 w-full bg-black flex flex-col">
       <StatusBar />
       <div className="flex-1 relative">
         <div className="absolute inset-0">

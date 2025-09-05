@@ -389,9 +389,9 @@ export default function Editor() {
           </div>
 
           {/* Content Area - Full Height */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden min-h-0">
             {currentView === "preview" ? (
-              <div className="flex-1 bg-black">
+              <div className="flex-1 bg-black relative min-h-0">
                 <ErrorBoundary
                   fallback={
                     <div className="h-full flex items-center justify-center bg-gray-900/50">
