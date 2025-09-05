@@ -555,9 +555,9 @@ export function cn(...inputs: ClassValue[]) {
   };
 
   return (
-    <div className="h-full w-full bg-black relative">
+    <div className="h-full w-full bg-black relative flex flex-col">
       <StatusBar />
-      <ErrorBoundary>
+      <div className="flex-1">
         <SandpackProvider
           template="react-ts"
           theme="dark"
@@ -575,10 +575,11 @@ export function cn(...inputs: ClassValue[]) {
         >
           <SandpackLayout style={{ height: "100%", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
             {/* Preview with Error Overlay */}
-            <div style={{ flex: 1, minHeight: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
+            <div style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
               <SandpackPreview 
                 style={{ 
                   flex: 1,
+                  height: "100%",
                   width: "100%",
                   backgroundColor: "hsl(0 0% 0%)",
                   border: "none"
@@ -588,16 +589,10 @@ export function cn(...inputs: ClassValue[]) {
                 showOpenInCodeSandbox={false}
               />
               <ErrorOverlay />
-              <SandpackConsole
-                standalone={false}
-                showHeader={true}
-                resetOnPreviewRestart
-                style={{ height: 200, backgroundColor: "hsl(0 0% 5%)", borderTop: "1px solid hsl(0 0% 15%)" }}
-              />
             </div>
           </SandpackLayout>
         </SandpackProvider>
-      </ErrorBoundary>
+      </div>
     </div>
   );
 }
