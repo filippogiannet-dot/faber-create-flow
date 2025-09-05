@@ -558,7 +558,6 @@ export function cn(...inputs: ClassValue[]) {
       <StatusBar />
       <ErrorBoundary>
         <SandpackProvider
-          key={JSON.stringify(Object.keys(sandpackFiles).sort()) + ':' + Date.now()}
           template="react-ts"
           theme="dark"
           files={sandpackFiles}
@@ -573,12 +572,12 @@ export function cn(...inputs: ClassValue[]) {
             recompileDelay: 100
           }}
         >
-          <SandpackLayout style={{ height: "calc(100vh - 2rem)", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
+          <SandpackLayout style={{ height: "100%", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
             {/* Preview with Error Overlay */}
-            <div style={{ flex: 1, minHeight: "calc(100vh - 2rem)", display: "flex", flexDirection: "column", position: "relative" }}>
+            <div style={{ flex: 1, minHeight: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
               <SandpackPreview 
                 style={{ 
-                  height: "calc(100vh - 12rem)", 
+                  flex: 1,
                   width: "100%",
                   backgroundColor: "hsl(0 0% 0%)",
                   border: "none"
