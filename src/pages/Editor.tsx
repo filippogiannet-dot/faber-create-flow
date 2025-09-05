@@ -338,7 +338,7 @@ export default function Editor() {
         </div>
 
         {/* Preview Panel - 70% */}
-        <div className="flex-none w-[70%] flex flex-col bg-black">
+        <div className="flex-none w-[70%] flex flex-col bg-black min-h-0">
           {/* Header with toggle */}
           <div className="p-4 border-b border-gray-800 bg-gray-900">
             <div className="flex items-center justify-between">

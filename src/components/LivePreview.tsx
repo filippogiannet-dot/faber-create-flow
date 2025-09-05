@@ -611,7 +611,7 @@ export function cn(...inputs: ClassValue[]) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-black">
+    <div className="flex-1 min-h-0 w-full h-full flex flex-col bg-black">
       <StatusBar />
       <SandpackProvider
         template="react-ts"
@@ -628,7 +628,7 @@ export function cn(...inputs: ClassValue[]) {
           recompileDelay: 100
         }}
       >
-        <SandpackLayout className="flex-1 !h-full !w-full" style={{ backgroundColor: "hsl(0 0% 0%)" }}>
+        <SandpackLayout className="flex-1" style={{ height: "100%", width: "100%", backgroundColor: "hsl(0 0% 0%)" }}>
           <div className="relative h-full w-full">
             <SandpackPreview
               style={{
