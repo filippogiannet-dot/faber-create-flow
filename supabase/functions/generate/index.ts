@@ -92,40 +92,80 @@ EXAMPLE DOMAIN MAPPING:
 
     Return ONLY JSON, no explanations.`;
 
-    const appSpecSystemPrompt = `You are an expert React + TypeScript application architect. Always generate a strict AppSpec v1 JSON for complete, production-ready apps.
+    const appSpecSystemPrompt = `You are an expert React developer who builds modern, production-ready web applications. You generate applications that are visually stunning, highly interactive, and use modern React patterns.
 
-CRITICAL: Output ONLY AppSpec v1 JSON in this exact structure:
+CRITICAL REQUIREMENTS:
+1. Generate ONLY modern React TypeScript components using functional components and hooks
+2. Use Tailwind CSS for ALL styling - never use inline styles or plain CSS
+3. Create beautiful, modern UI that looks like it came from top design agencies
+4. Generate multiple interconnected files that work together as a complete application
+5. Include proper state management, event handlers, and interactive features
+6. Make every component responsive and accessible
+7. Add smooth animations and micro-interactions using Tailwind classes
+8. Use modern design patterns: glassmorphism, subtle shadows, proper spacing
+9. Include proper TypeScript types for everything
+
+OUTPUT FORMAT - Return ONLY valid JSON in this EXACT format:
 {
-  "app_meta": {
-    "name": "string",
-    "description": "string",
-    "design_system": "shadcn|chakra|mui|mantine|tailwind-only|headless+radix"
+  "files": {
+    "App.tsx": "COMPLETE_REACT_COMPONENT_CODE_HERE",
+    "components/Header.tsx": "COMPONENT_CODE_HERE",
+    "components/Sidebar.tsx": "COMPONENT_CODE_HERE",
+    "types/index.ts": "TYPE_DEFINITIONS_HERE",
+    "utils/helpers.ts": "UTILITY_FUNCTIONS_HERE",
+    "hooks/useCustomHook.ts": "CUSTOM_HOOK_CODE_HERE"
   },
-  "template_id": "string",
-  "components_used": [ { "id": "component/button/primary", "props": { "label": "Save" } } ],
-  "files": [ { "path": "src/App.tsx", "language": "tsx", "content": "/* full compilable code */" } ],
-  "seed": 12345,
-  "notes": "string"
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@types/react": "^18.2.0"
+  },
+  "entryPoint": "App.tsx"
 }
 
-RULES:
-- Validate all required fields. If unsure about components, propose 2-3 options in notes.
-- Use realistic, varied data (no repeated mock names). Prefer synthetic data; vary with the seed.
-- Reference only components/templates present in the registry manifest (we will resolve them).
-- All code in files[] must be complete and compilable. Include index.html, src/main.tsx, and src/index.css.
-- For design_system, wrap the app with the correct providers in src/main.tsx as needed.
+DESIGN PRINCIPLES:
+- Use modern color palettes (grays: slate-50 to slate-900, blues: blue-500, etc.)
+- Implement proper visual hierarchy with typography (text-3xl, text-lg, etc.)
+- Add hover effects and transitions (hover:bg-blue-600, transition-all duration-200)
+- Use proper spacing (p-6, m-4, space-y-4, gap-6)
+- Include loading states and empty states
+- Add icons using Lucide React pattern: import { Icon } from 'lucide-react'
+- Make everything interactive with proper click handlers
+- Use modern layout techniques (flex, grid, space-between)
 
-LIBRARIES (allowed): @headlessui/react, @heroicons/react, recharts, react-toastify, framer-motion, react-beautiful-dnd, react-table, react-select, react-modal.
+MANDATORY PATTERNS FOR EVERY APP:
+1. Always use useState and useEffect hooks appropriately
+2. Always include proper TypeScript interfaces
+3. Always use modern Tailwind classes for beautiful styling
+4. Always include hover effects and transitions
+5. Always make it responsive with proper spacing
+6. Always include loading states and empty states
+7. Always use semantic HTML with proper accessibility
+8. Always include proper event handlers
+9. Always use modern React patterns (no class components)
+10. Always generate multiple related files when the app is complex
 
-NEVER:
-- Return prose or markdown; only raw JSON.
-- Use lorem ipsum or placeholders.
-- Reference missing imports.
+VISUAL REQUIREMENTS:
+- Use gradients: bg-gradient-to-r from-blue-500 to-purple-600
+- Use shadows: shadow-lg, shadow-xl for depth
+- Use rounded corners: rounded-xl, rounded-2xl
+- Use proper spacing: p-6, m-4, space-y-6, gap-4
+- Use hover effects: hover:bg-blue-600, hover:scale-105
+- Use transitions: transition-all duration-200
+- Use modern colors: slate-800, blue-600, green-500, red-500
+- Use proper typography: text-3xl font-bold, text-lg font-medium
 
-Notes about variability:
-- Temperature should lead to diverse outputs; avoid identical datasets across generations.
-- Use different names, companies, and numbers per run unless seed is provided.
-`;
+NEVER GENERATE:
+- Plain HTML without React components
+- Inline styles
+- Class components
+- Basic CSS without Tailwind
+- Non-interactive components
+- Components without proper state management
+- Apps without proper visual hierarchy
+- Components without TypeScript types
+
+Remember: Every app should look like it was built by a top design agency and function like a professional application.`;
 
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -865,16 +905,35 @@ export default function Settings() {
       };
     }
 
-    // Extract files from parsed response
-    const files = (parsedResponse.files as Array<{ path: string; content: string; language?: string }> )
-      .filter(f => f && typeof f.path === 'string' && typeof f.content === 'string')
-      .map(f => {
-        let path = f.path.startsWith('/') ? f.path : '/' + f.path;
-        // Move runtime files under /src
-        if (path.toLowerCase() === '/app.tsx') path = '/src/App.tsx';
-        if (path.toLowerCase() === '/main.tsx') path = '/src/main.tsx';
-        return { path, content: f.content };
-      });
+    // Extract files from parsed response (support both array and object map)
+    let files: Array<{ path: string; content: string }> = [];
+
+    const normalizeToSrc = (p: string) => {
+      const norm = p.startsWith('/') ? p : `/${p}`;
+      if (/^\/(src|public|assets)\//i.test(norm) || norm === '/package.json' || norm === '/tailwind.config.js' || norm === '/postcss.config.js') {
+        return norm;
+      }
+      return norm.startsWith('/src/') ? norm : `/src${norm}`;
+    };
+
+    if (Array.isArray((parsedResponse as any).files)) {
+      files = (parsedResponse.files as Array<{ path: string; content: string; language?: string }>)
+        .filter(f => f && typeof f.path === 'string' && typeof f.content === 'string')
+        .map(f => {
+          let path = f.path.startsWith('/') ? f.path : '/' + f.path;
+          // Move runtime files under /src
+          if (path.toLowerCase() === '/app.tsx') path = '/src/App.tsx';
+          if (path.toLowerCase() === '/main.tsx') path = '/src/main.tsx';
+          return { path, content: f.content };
+        });
+    } else if (parsedResponse && (parsedResponse as any).files && typeof (parsedResponse as any).files === 'object') {
+      const entries = Object.entries((parsedResponse as any).files as Record<string, string>);
+      files = entries
+        .filter(([, content]) => typeof content === 'string')
+        .map(([path, content]) => ({ path: normalizeToSrc(path), content }));
+    } else {
+      files = [];
+    }
 
     const hasIndex = files.some(f => f.path === '/index.html');
     const hasApp = files.some(f => f.path.toLowerCase() === '/src/app.tsx');
