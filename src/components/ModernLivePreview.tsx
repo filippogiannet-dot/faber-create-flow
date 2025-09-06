@@ -37,30 +37,16 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ code, onError, onSucce
       }
     }
 
-    // Basic syntax checks
-    if (!cleanCode.includes('import React')) {
-      if (!cleanCode.includes('const App') && !cleanCode.includes('function App')) {
-        errors.push('No React import and no App component found');
-      } else {
-        // Add React import
-        cleanCode = `import React, { useState, useEffect } from 'react';\n\n${cleanCode}`;
-        addDebugInfo('info', 'Added missing React import');
-      }
-    }
+    // Normalize for browser execution: remove module imports/exports
+    cleanCode = cleanCode
+      .replace(/^[\t ]*import[^\n]*\n/gm, '')
+      .replace(/^[\t ]*export\s+default\s+/gm, '')
+      .replace(/^[\t ]*export\s+(const|function|class)\s+/gm, '$1 ');
+    addDebugInfo('info', 'Stripped module imports/exports for browser execution');
 
-    // Check for basic component structure
+    // Basic component presence check
     if (!cleanCode.includes('const App') && !cleanCode.includes('function App')) {
       errors.push('No App component found');
-    }
-
-    // Check for export
-    if (!cleanCode.includes('export default App') && !cleanCode.includes('export default')) {
-      if (cleanCode.includes('const App')) {
-        cleanCode += '\n\nexport default App;';
-        addDebugInfo('info', 'Added missing export default');
-      } else {
-        errors.push('No export default found');
-      }
     }
 
     // Check for basic JSX syntax
@@ -97,14 +83,25 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ code, onError, onSucce
     return `
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Live Preview</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.23.4/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Early resource error reporting for external scripts/styles
+    window.addEventListener('error', function(e) {
+      const t = e.target || e.srcElement;
+      const isRes = t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK' || t.tagName === 'IMG');
+      if (isRes) {
+        const src = t.tagName === 'LINK' ? t.href : t.src;
+        window.parent.postMessage({ type: 'PREVIEW_ERROR', error: 'Failed to load resource: ' + (src || t.tagName) }, '*');
+      }
+    }, true);
+  </script>
+  <script crossorigin="anonymous" src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin="anonymous" src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script crossorigin="anonymous" src="https://unpkg.com/@babel/standalone@7.23.4/babel.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.tailwindcss.com"></script>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -210,7 +207,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ code, onError, onSucce
     debugLog('info', 'Preview environment initialized');
   </script>
   
-  <script type="text/babel" data-type="module">
+  <script type="text/babel" data-type="module" data-presets="typescript,react">
     try {
       debugLog('info', 'Starting Babel compilation');
       
