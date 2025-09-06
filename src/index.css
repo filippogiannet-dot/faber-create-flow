@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Critical CSS for immediate loading */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 /* Faber Design System - Apple-inspired with Chrome Effects
 All colors MUST be HSL. */
 

@@ -261,6 +261,18 @@ const HeroSection = () => {
           </div>
         </div>
 
+        {/* Prompt Suggestions */}
+        {!user && (
+          <div className="max-w-6xl mx-auto mb-16">
+            <PromptSuggestions 
+              onSelectPrompt={(selectedPrompt) => {
+                // Redirect to auth if not logged in
+                navigate('/auth');
+              }}
+            />
+          </div>
+        )}
+
         {/* All Projects for Logged-in Users */}
         {user && recentProjects.length > 0 && (
           <div className="max-w-6xl mx-auto mb-16">

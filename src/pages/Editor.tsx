@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot, CheckCircle, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import LivePreview from "@/components/ModernLivePreview";
+import EnhancedLivePreview from "@/components/EnhancedLivePreview";
 import CodeEditor from "@/components/CodeEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { aiGeneration } from "@/services/aiGeneration";
 
 interface ChatMessage {
   id: string;
@@ -122,7 +123,6 @@ export default function Editor() {
     if (!prompt.trim()) return;
 
     const isInitialRun = !hasGeneratedOnce && generatedFiles.length === 0;
-    const startTime = Date.now();
 
     setLoading(true);
     setCompleted(false);
@@ -136,57 +136,43 @@ export default function Editor() {
     setPrompt("");
 
     try {
-      // Log start of generation
-      await logBuildPhase('analyze', 'started');
-      
       const initId = addChatMessage("🔄 Inizializzo la generazione...", 'status');
       
-      await new Promise(resolve => setTimeout(resolve, 300));
       updateChatMessage(initId, "✅ Inizializzazione completata");
-      await logBuildPhase('analyze', 'success', Date.now() - startTime);
       
       const parseId = addChatMessage(isInitialRun ? "🔍 Analizzo il prompt per generare l'app..." : "🔧 Analizzo le modifiche richieste...", 'status');
       
-      const preparedPrompt = isInitialRun
-        ? `Genera un’app completa con queste caratteristiche:\n\n${rawPrompt}`
-        : `Applica le seguenti modifiche al codice esistente senza rigenerare l’app da zero. Mantieni la struttura e aggiorna solo i file necessari.\n\nModifiche:\n${rawPrompt}`;
-      
-      const { data, error } = await supabase.functions.invoke("generate", {
-        body: { prompt: preparedPrompt },
+      // Use enhanced AI generation service
+      const result = await aiGeneration.generateWithEnhancement({
+        projectId: projectId!,
+        prompt: rawPrompt,
+        isInitial: isInitialRun,
+        context: {
+          existingFiles: generatedFiles,
+          previousPrompts: chatMessages.filter(m => m.type === 'user').map(m => m.text)
+        }
       });
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error || 'Generation failed');
+      }
 
       updateChatMessage(parseId, "✅ Analisi completata");
       const genId = addChatMessage(isInitialRun ? "⚡ Genero i componenti..." : "✏️ Applico le modifiche ai file...", 'status');
       
-      await new Promise(resolve => setTimeout(resolve, 200));
 
-      if (data?.files && Array.isArray(data.files)) {
-        // Log successful generation
-        const filesChanged = data.files.map((f: any) => f.path);
-        await logBuildPhase('generate', 'success', Date.now() - startTime, [], [], [], filesChanged);
-        
+      if (result.files && Array.isArray(result.files)) {
         updateChatMessage(genId, isInitialRun ? "✅ Componenti generati" : "✅ Modifiche applicate");
         const previewId = addChatMessage("🎨 Aggiorno la preview...", 'status');
 
-        // Log build phase start
-        await logBuildPhase('build', 'started');
 
-        // Always replace files completely for fresh generation
-        setGeneratedFiles(data.files);
+        setGeneratedFiles(result.files);
         setCurrentView("preview");
 
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Log successful build and preview update
-        await logBuildPhase('build', 'success', Date.now() - startTime);
-        await logBuildPhase('preview', 'success', Date.now() - startTime);
-        
         updateChatMessage(previewId, isInitialRun ? "🚀 Preview aggiornata con successo!" : "🔄 Preview aggiornata.");
 
         if (isInitialRun) {
-          addChatMessage("App generata con successo! Ora puoi visualizzarla nella preview.", 'assistant');
+          addChatMessage(`App generata con successo! Qualità: ${result.validationScore || 100}/100`, 'assistant');
           setHasGeneratedOnce(true);
           toast({
             title: "App generata!",
@@ -201,15 +187,11 @@ export default function Editor() {
         }
 
         setCompleted(true);
-        // Reload logs to show latest entries
-        loadProjectLogs();
       } else {
-        await logBuildPhase('generate', 'error', Date.now() - startTime, [{ message: 'Invalid response format' }]);
         throw new Error("Formato risposta non valido");
       }
     } catch (error) {
       console.error("Errore durante la generazione:", error);
-      await logBuildPhase('generate', 'error', Date.now() - startTime, [{ message: error.message }]);
       addChatMessage("❌ Errore durante la generazione dell'app", 'status');
       toast({
         variant: "destructive",
@@ -455,8 +437,8 @@ export default function Editor() {
                         </div>
                       }
                     >
-                      <CodeEditor
-                        code={fileContent}
+                      <EnhancedLivePreview 
+                        files={generatedFiles}
                         onChange={(newContent) => {
                           setFileContent(newContent);
                           // Update the file in generatedFiles
