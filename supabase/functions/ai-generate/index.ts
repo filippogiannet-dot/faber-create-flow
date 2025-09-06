@@ -462,36 +462,84 @@ Request: "${prompt}"
       }
     })();
 
+    // Enhanced generation with context and validation pipeline
+    console.log('🎨 Starting enhanced AI generation pipeline...');
+    
+    // Step 1: Get project context for better generation
+    const contextPrompt = `
+PROJECT ANALYSIS:
+${JSON.stringify(analysis)}
+
+EXISTING PROJECT CONTEXT:
+- Project ID: ${projectId}
+- Current Prompt: ${prompt}
+- Framework: React + TypeScript + Tailwind CSS
+
+ENHANCEMENT INSTRUCTIONS:
+Based on the existing project files and previous generations, create an enhanced prompt that:
+1. Maintains consistency with existing code patterns
+2. Uses design system tokens instead of hardcoded colors
+3. Follows established component architecture
+4. Builds upon previous implementations
+5. Generates complete, production-ready code
+
+Return an enhanced version of the user prompt that includes context and specific technical requirements.
+
+Original User Request: "${prompt}"
+`;
+
+    // Get enhanced prompt with context
+    let enhancedPrompt = prompt;
+    try {
+      const contextResponse = await callOpenAI(contextPrompt, 'You are a prompt engineer. Enhance user prompts with technical context.');
+      enhancedPrompt = contextResponse.choices[0]?.message?.content?.trim() || prompt;
+      console.log('📋 Enhanced prompt created');
+    } catch (error) {
+      console.log('⚠️ Context enhancement failed, using original prompt:', error.message);
+    }
+
     const codePrompt = `
-    Generate a complete web application for: ${prompt}
+ENHANCED REQUEST: ${enhancedPrompt}
 
-    Technical specifications:
-    ${JSON.stringify(analysis)}
+TECHNICAL SPECIFICATIONS:
+${JSON.stringify(analysis)}
 
-    IMPORTANT:
-    - Output STRICT JSON only (no markdown, no code fences, no explanations)
-    - Schema:
-      {
-        "files": [
-          { "path": "public/index.html", "content": "..." },
-          { "path": "src/App.tsx", "content": "..." }
-        ],
-        "explanation": "short summary"
-      }
-    - Do not include placeholders or TODOs
-    - Use Tailwind CSS where applicable
-    - TypeScript for .tsx files
-    `;
+STRICT REQUIREMENTS:
+1. Generate COMPLETE React components with TypeScript
+2. Use Tailwind CSS with semantic design tokens (NO hardcoded colors)
+3. Include ALL necessary imports (React, hooks, etc.)
+4. Export components properly (export default ComponentName)
+5. NO placeholder comments or incomplete implementations
+6. Make components responsive and accessible
+7. Handle loading states and errors gracefully
+8. Use proper TypeScript interfaces and types
+9. Follow modern React patterns (functional components, hooks)
+10. Include proper error boundaries where needed
 
-    // Attempt generation with robust JSON parsing + retries on invalid JSON
+OUTPUT FORMAT (STRICT JSON):
+{
+  "files": [
+    { "path": "src/App.tsx", "content": "complete component code..." },
+    { "path": "src/components/ComponentName.tsx", "content": "complete component code..." }
+  ],
+  "explanation": "brief technical summary"
+}
+
+Generate production-ready code only. No explanations outside JSON.
+`;
+
+    // Enhanced generation with validation retries
     let generatedCode: any = null;
     let lastParseError: any = null;
     let lastCodeData: any = null;
+    let validationResults: any[] = [];
+    
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const attemptPrompt = attempt === 0
         ? codePrompt
-        : `${codePrompt}\n\nYour previous output was invalid JSON. Reprint STRICT JSON that conforms EXACTLY to the schema. No prose.`;
+        : `${codePrompt}\n\nFIX THESE VALIDATION ERRORS FROM PREVIOUS ATTEMPT:\n${validationResults.map(v => `${v.fileName}: ${v.errors?.join(', ') || 'Unknown error'}`).join('\n')}\n\nGenerate corrected STRICT JSON:`;
 
+      console.log(`🔄 Generation attempt ${attempt + 1}/${MAX_RETRIES}`);
       const codeData = await callOpenAI(attemptPrompt, systemPrompt);
       lastCodeData = codeData;
 
@@ -503,10 +551,76 @@ Request: "${prompt}"
           .replace(/^```\s*/i, '')
           .replace(/```$/i, '')
           .trim();
-        generatedCode = JSON.parse(cleaned);
-        await logStep(supabaseClient, projectId, 'generation', 'completed', { attempt });
-        lastParseError = null;
-        break;
+        
+        const parsedCode = JSON.parse(cleaned);
+        
+        // Step 2: Validate generated code before accepting it
+        if (parsedCode?.files && Array.isArray(parsedCode.files)) {
+          console.log('🔍 Validating generated files...');
+          validationResults = [];
+          
+          for (const file of parsedCode.files) {
+            if (file.content && file.content.trim().length > 0) {
+              // Mock validation (in real implementation, call validation service)
+              const hasPlaceholders = file.content.includes('// TODO') || 
+                                    file.content.includes('// your code here') ||
+                                    file.content.includes('/* TODO') ||
+                                    file.content.includes('{...}');
+              
+              const hasReactImport = file.content.includes('import React') || 
+                                   file.content.includes('import { ');
+              
+              const hasExport = file.content.includes('export default') || 
+                              file.content.includes('export const');
+              
+              const errors = [];
+              if (hasPlaceholders) errors.push('Contains placeholder comments');
+              if (!hasReactImport && file.path.includes('.tsx')) errors.push('Missing React import');
+              if (!hasExport && file.path.includes('.tsx')) errors.push('Missing export statement');
+              
+              validationResults.push({
+                fileName: file.path,
+                isValid: errors.length === 0,
+                errors: errors,
+                score: Math.max(0, 100 - (errors.length * 25))
+              });
+            }
+          }
+          
+          const hasValidationErrors = validationResults.some(v => !v.isValid);
+          
+          if (!hasValidationErrors) {
+            console.log('✅ All files passed validation');
+            generatedCode = parsedCode;
+            await logStep(supabaseClient, projectId, 'generation', 'completed', { 
+              attempt, 
+              validated: true,
+              avgScore: validationResults.reduce((a, b) => a + b.score, 0) / validationResults.length
+            });
+            lastParseError = null;
+            break;
+          } else {
+            console.log(`❌ Validation failed for attempt ${attempt + 1}`);
+            validationResults.forEach(v => {
+              if (!v.isValid) console.log(`  - ${v.fileName}: ${v.errors.join(', ')}`);
+            });
+            
+            if (attempt === MAX_RETRIES - 1) {
+              // Last attempt, accept with warnings
+              console.log('⚠️ Accepting code with validation warnings on final attempt');
+              generatedCode = parsedCode;
+              await logStep(supabaseClient, projectId, 'generation', 'completed', { 
+                attempt, 
+                validationWarnings: true,
+                issues: validationResults.filter(v => !v.isValid)
+              });
+              lastParseError = null;
+              break;
+            }
+          }
+        } else {
+          throw new Error('Invalid file structure in generated response');
+        }
       } catch (_parseError) {
         // Robust fallback: extract JSON object from response and try fixes
         const content = (codeData?.choices?.[0]?.message?.content ?? '').toString();

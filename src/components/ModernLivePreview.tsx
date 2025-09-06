@@ -621,9 +621,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ code, onError, onSucce
       <iframe
         ref={iframeRef}
         className="w-full h-full"
-        sandbox="allow-scripts allow-same-origin allow-modals allow-forms"
+        sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
         title="Live Preview"
         style={{ border: 'none' }}
+        onError={(e) => {
+          console.error('Iframe error:', e);
+          addDebugInfo('error', 'Iframe failed to load');
+        }}
       />
       
       {/* Debug info panel */}
