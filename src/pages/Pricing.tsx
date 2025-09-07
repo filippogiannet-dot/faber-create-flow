@@ -3,29 +3,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Check } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PLANS } from "@/lib/plans";
+import { useAuth } from "@/integrations/supabase/AuthProvider";
+import { useNavigate } from "react-router-dom";
 const Pricing = () => {
-  const plans = [{
-    name: "Starter",
-    price: "€8.99",
-    period: "/mese",
-    description: "Perfetto per iniziare",
-    features: ["50 generazioni al mese", "Supporto via email", "Template di base", "Export codice"],
-    popular: false
-  }, {
-    name: "Pro",
-    price: "€14.99",
-    period: "/mese",
-    description: "Per creatori professionali",
-    features: ["100 generazioni al mese", "Supporto prioritario", "Template premium", "Export codice avanzato", "Collaborazione team", "API access"],
-    popular: true
-  }, {
-    name: "Enterprise",
-    price: "Contattaci",
-    period: "",
-    description: "Per aziende che necessitano volumi maggiori",
-    features: ["Generazioni illimitate", "Supporto dedicato", "Custom templates", "White-label solution", "Team management", "API illimitato", "SLA garantito"],
-    popular: false
-  }];
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  const plans = Object.values(PLANS).map(plan => ({
+    ...plan,
+    price: plan.price === 0 ? "Gratis" : `€${plan.price}`,
+    period: plan.price === 0 ? "" : "/mese",
+    description: plan.id === 'free' ? "Perfetto per iniziare" :
+                plan.id === 'starter' ? "Per creatori individuali" :
+                plan.id === 'pro' ? "Per professionisti" :
+                "Per aziende enterprise"
+  }));
+
+  const handleSelectPlan = async (planId: string) => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (planId === 'free') {
+      navigate('/');
+      return;
+    }
+
+    // TODO: Integrate with Stripe for payment processing
+    console.log('Selected plan:', planId);
+    // For now, just redirect to home
+    navigate('/');
+  };
   return <div className="min-h-screen bg-background">
       <Navbar />
       
@@ -46,7 +56,7 @@ const Pricing = () => {
 
           {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {plans.map((plan, index) => <Card key={plan.name} className={`relative bg-gradient-card border-border transition-all duration-300 hover:shadow-faber-card hover:scale-[1.02] ${plan.popular ? 'ring-2 ring-primary shadow-faber-glow' : ''}`}>
+            {plans.map((plan, index) => <Card key={plan.id} className={`relative bg-gradient-card border-border transition-all duration-300 hover:shadow-faber-card hover:scale-[1.02] ${plan.popular ? 'ring-2 ring-primary shadow-faber-glow' : ''}`}>
                 {plan.popular && <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-gradient-button text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
                       Più popolare
@@ -57,7 +67,7 @@ const Pricing = () => {
                   <CardTitle className="text-xl font-bold text-foreground mb-2">
                     {plan.name}
                   </CardTitle>
-                  <CardDescription className="text-sm text-muted-foreground mb-4">
+                  <CardDescription className="text-sm text-muted-foreground mb-4 min-h-[40px]">
                     {plan.description}
                   </CardDescription>
                   <div className="mb-4">
@@ -68,6 +78,11 @@ const Pricing = () => {
                         {plan.period}
                       </span>}
                   </div>
+                  {plan.credits && (
+                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      {plan.credits} generazioni/mese
+                    </Badge>
+                  )}
                 </CardHeader>
 
                 <CardContent>
@@ -78,8 +93,14 @@ const Pricing = () => {
                       </li>)}
                   </ul>
 
-                  <Button className={`w-full text-sm ${plan.popular ? 'bg-gradient-button hover:shadow-faber-button' : 'bg-faber-surface-light hover:bg-faber-surface text-foreground border border-border'} transition-all duration-300 transform hover:scale-[1.02]`} size="lg">
-                    {plan.name === 'Enterprise' ? 'Contatta il team' : 'Inizia ora'}
+                  <Button 
+                    className={`w-full text-sm ${plan.popular ? 'bg-gradient-button hover:shadow-faber-button' : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border'} transition-all duration-300 transform hover:scale-[1.02]`} 
+                    size="lg"
+                    onClick={() => handleSelectPlan(plan.id)}
+                  >
+                    {plan.id === 'enterprise' ? 'Contatta il team' : 
+                     plan.id === 'free' ? 'Inizia gratis' : 
+                     user?.user_metadata?.plan === plan.id ? 'Piano attuale' : 'Aggiorna'}
                   </Button>
                 </CardContent>
               </Card>)}

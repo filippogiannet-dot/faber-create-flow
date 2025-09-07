@@ -6,11 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send, Code, Eye, Loader2, Monitor, AlertTriangle, User, Bot, CheckCircle, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import EnhancedLivePreview from "@/components/EnhancedLivePreview";
+import EnhancedCodePreview from "@/components/EnhancedCodePreview";
 import CodeEditor from "@/components/CodeEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import LivePreview from "@/components/ModernLivePreview";
-import { aiGeneration } from "@/services/aiGeneration";
+import { generateWithAI } from "@/lib/ai/generator";
+import { canUserGenerate } from "@/lib/plans";
 
 interface ChatMessage {
   id: string;
@@ -123,6 +123,18 @@ export default function Editor() {
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
+    // Check user limits
+    const { canGenerate, reason } = canUserGenerate(user);
+    if (!canGenerate) {
+      addChatMessage(`❌ ${reason}`, 'status');
+      toast({
+        variant: "destructive",
+        title: "Limite raggiunto",
+        description: reason,
+      });
+      return;
+    }
+
     const isInitialRun = !hasGeneratedOnce && generatedFiles.length === 0;
 
     setLoading(true);
@@ -141,15 +153,11 @@ export default function Editor() {
       
       const parseId = addChatMessage(isInitialRun ? "🔍 Analizzo il prompt per generare l'app..." : "🔧 Analizzo le modifiche richieste...", 'status');
       
-      // Use enhanced AI generation service
-      const result = await aiGeneration.generateWithEnhancement({
-        projectId: projectId!,
-        prompt: rawPrompt,
-        isInitial: isInitialRun,
-        context: {
-          existingFiles: generatedFiles,
-          previousPrompts: chatMessages.filter(m => m.type === 'user').map(m => m.text)
-        }
+      // Use enhanced AI generation
+      const result = await generateWithAI(rawPrompt, {
+        template: 'default',
+        complexity: isInitialRun ? 'medium' : 'simple',
+        style: 'modern'
       });
 
       if (!result.success) {
@@ -160,12 +168,13 @@ export default function Editor() {
       const genId = addChatMessage(isInitialRun ? "⚡ Genero i componenti..." : "✏️ Applico le modifiche ai file...", 'status');
       
 
-      if (result.files && Array.isArray(result.files)) {
+      if (result.code) {
         updateChatMessage(genId, isInitialRun ? "✅ Componenti generati" : "✅ Modifiche applicate");
         const previewId = addChatMessage("🎨 Aggiorno la preview...", 'status');
 
-
-        setGeneratedFiles(result.files);
+        // Convert single code to files array for compatibility
+        const files = [{ path: 'src/App.tsx', content: result.code }];
+        setGeneratedFiles(files);
         setCurrentView("preview");
 
         updateChatMessage(previewId, isInitialRun ? "🚀 Preview aggiornata con successo!" : "🔄 Preview aggiornata.");
@@ -386,7 +395,7 @@ export default function Editor() {
                     </div>
                   }
                 >
-                  <LivePreview 
+                  <EnhancedCodePreview 
                     code={(generatedFiles.find(f => f.path.toLowerCase().endsWith('app.tsx'))?.content) || `import React from 'react';\nconst App = () => <div className="min-h-screen grid place-items-center bg-black text-white p-8">No App.tsx found</div>;\nexport default App;`}
                     onError={(error) => {
                       setValidationStatus({ isValid: false, errors: [{ message: error, severity: 'error' }] });
@@ -395,6 +404,7 @@ export default function Editor() {
                     onSuccess={() => {
                       setValidationStatus({ isValid: true, errors: [] });
                     }}
+                    showControls={true}
                   />
                 </ErrorBoundary>
               </div>
@@ -445,11 +455,10 @@ export default function Editor() {
                         </div>
                       }
                     >
-                      <EnhancedLivePreview 
-                        files={generatedFiles}
+                      <CodeEditor
+                        code={fileContent}
                         onChange={(newContent) => {
                           setFileContent(newContent);
-                          // Update the file in generatedFiles
                           setGeneratedFiles(prev => 
                             prev.map(file => 
                               file.path === selectedFile 
