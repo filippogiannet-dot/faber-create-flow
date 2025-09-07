@@ -113,10 +113,26 @@ export async function generateWithAI(
       };
     }
 
-    const code = data?.code || data?.response?.code;
+    // Debug logs to understand the response structure
+    console.log("AI raw response:", data);
+    
+    // Extract code from the correct response structure
+    const code = data?.code || 
+                 data?.response?.code || 
+                 data?.response?.files?.[0]?.content ||
+                 data?.files?.[0]?.content;
+    
+    console.log("Extracted code:", code);
     
     // Valida che il codice sia corretto
-    if (!code || !code.includes('export default') || !code.includes('return')) {
+    if (!code || code.trim() === '') {
+      console.error("Generated code is empty or undefined");
+      throw new Error('Generated code is empty');
+    }
+    
+    // Basic syntax validation
+    if (!code.includes('export default') || !code.includes('return')) {
+      console.error("Generated code missing required structure");
       throw new Error('Generated code is invalid');
     }
 

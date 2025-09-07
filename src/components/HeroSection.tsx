@@ -142,7 +142,10 @@ const HeroSection = () => {
         style: 'modern'
       });
 
-      if (result.success) {
+      // Validate result before proceeding
+      if (result.success && result.code && result.code.trim() !== '') {
+        console.log("Generation successful, updating project with code");
+        
         // Update project with generated code
         const { error: updateError } = await supabase.functions.invoke('update-project', {
           body: {
@@ -161,6 +164,8 @@ const HeroSection = () => {
         
         if (updateError) {
           console.error('Update project error:', updateError);
+        } else {
+          console.log('Project updated successfully');
         }
         
         toast({
@@ -168,7 +173,23 @@ const HeroSection = () => {
           description: `Qualità: ${result.validationScore}/100`,
         });
       } else {
-        throw new Error(result.error || 'Generation failed');
+        console.error("Generation failed or returned invalid code:", result);
+        toast({
+          variant: "destructive",
+          title: "Errore nella generazione",
+          description: result.error || "Il codice generato non è valido",
+        });
+        
+        // Update project status to failed
+        await supabase.functions.invoke('update-project', {
+          body: {
+            projectId: project.id,
+            updates: {
+              generation_status: 'failed',
+              error_message: result.error || 'Codice generato non valido',
+            },
+          },
+        });
       }
 
       // Legacy fallback for existing system
