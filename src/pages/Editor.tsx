@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import EnhancedLivePreview from "@/components/EnhancedLivePreview";
 import CodeEditor from "@/components/CodeEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import LivePreview from "@/components/ModernLivePreview";
 import { aiGeneration } from "@/services/aiGeneration";
 
 interface ChatMessage {
