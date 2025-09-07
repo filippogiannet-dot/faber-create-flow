@@ -241,7 +241,7 @@ export default function Portfolio() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-2 border-b-2 font-medium ${
+                className={\`py-4 px-2 border-b-2 font-medium ${
                   activeTab === tab 
                     ? 'border-blue-600 text-blue-600' 
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -371,7 +371,7 @@ export default function BlogPage() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full ${
+                className={\`px-4 py-2 rounded-full ${
                   selectedCategory === category
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
