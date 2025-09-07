@@ -157,7 +157,8 @@ export default function Dashboard() {
 export default function EcommercePage() {
   const [cart, setCart] = useState([]);
   
-  portfolio: `import React, { useState } from 'react';
+  portfolio: \`import React, { useState } from 'react';
+}
 
 export default function Portfolio() {
   const [activeTab, setActiveTab] = useState('projects');
@@ -258,6 +259,11 @@ export default function Portfolio() {
     </div>
   );
 }`,
+                }
+            )
+            )
+            }
+  )
   
   blog: `import React, { useState } from 'react';
 
