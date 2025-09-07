@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
+import PromptSuggestions from "@/components/PromptSuggestions";
 
 interface Project {
   id: string;
