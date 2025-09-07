@@ -33,7 +33,7 @@ export default function SaaSLanding() {
     { name: 'Pro', price: '$29', features: ['Unlimited Projects', 'Priority Support'] }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Email submitted:', email);
   };
@@ -152,13 +152,7 @@ export default function Dashboard() {
   );
 }`,
   
-  ecommerce: `import React, { useState, useCallback } from 'react';
-
-export default function EcommercePage() {
-  const [cart, setCart] = useState([]);
-  
-  portfolio: \`import React, { useState } from 'react';
-}
+  portfolio: `import React, { useState } from 'react';
 
 export default function Portfolio() {
   const [activeTab, setActiveTab] = useState('projects');
@@ -259,11 +253,6 @@ export default function Portfolio() {
     </div>
   );
 }`,
-                }
-            )
-            )
-            }
-  )
   
   blog: `import React, { useState } from 'react';
 
@@ -369,7 +358,6 @@ export function getTemplateByCategory(category: string): string {
   const categoryMap: Record<string, string> = {
     'business': 'dashboard',
     'marketing': 'saas',
-    'ecommerce': 'ecommerce',
     'portfolio': 'portfolio',
     'blog': 'blog',
     'landing': 'default'
