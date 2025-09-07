@@ -165,7 +165,7 @@ export default function EcommercePage() {
   ];
 
   const addToCart = useCallback((product) => {
-    setCart(prevCart => [...prevCart, product]);
+    setCart(function(prevCart) { return [...prevCart, product]; });
   }, []);
 
   return (
