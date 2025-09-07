@@ -140,8 +140,16 @@ export default function Dashboard() {
   
   ecommerce: `import React, { useState } from 'react';
 
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  rating: number;
+}
+
 export default function EcommercePage() {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState<Product[]>([]);
   
   const products = [
     { id: 1, name: 'Premium Headphones', price: 299, image: '🎧', rating: 4.8 },
@@ -150,9 +158,9 @@ export default function EcommercePage() {
     { id: 4, name: 'Laptop Stand', price: 79, image: '💻', rating: 4.5 }
   ];
 
-  const addToCart = (product) => {
+  const addToCart = React.useCallback((product: Product) => {
     setCart([...cart, product]);
-  };
+  }, [cart]);
 
   return (
     <div className="min-h-screen bg-gray-50">
