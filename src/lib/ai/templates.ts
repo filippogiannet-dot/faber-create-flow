@@ -154,25 +154,17 @@ export default function Dashboard() {
   
   ecommerce: `import React, { useState, useCallback } from 'react';
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  rating: number;
-}
-
 export default function EcommercePage() {
-  const [cart, setCart] = useState<Product[]>([]);
+  const [cart, setCart] = useState([]);
   
-  const products: Product[] = [
+  const products = [
     { id: 1, name: 'Premium Headphones', price: 299, image: '🎧', rating: 4.8 },
     { id: 2, name: 'Wireless Speaker', price: 199, image: '🔊', rating: 4.6 },
     { id: 3, name: 'Smart Watch', price: 399, image: '⌚', rating: 4.9 },
     { id: 4, name: 'Laptop Stand', price: 79, image: '💻', rating: 4.5 }
   ];
 
-  const addToCart = useCallback((product: Product) => {
+  const addToCart = useCallback((product) => {
     setCart(prevCart => [...prevCart, product]);
   }, []);
 
