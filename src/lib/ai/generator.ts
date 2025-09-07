@@ -55,11 +55,13 @@ export async function generateWithAI(
   prompt: string, 
   options: GenerationOptions = {}
 ): Promise<GenerationResult> {
+  let template: string;
+  
   try {
     const { template: templateOption = 'default', complexity = 'medium', style = 'modern' } = options;
     
     // Defensive check to ensure template is valid
-    const template = (typeof templateOption === 'string' && templateOption in templates) 
+    template = (typeof templateOption === 'string' && templateOption in templates) 
       ? templateOption 
       : 'default';
     
