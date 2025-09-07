@@ -1,6 +1,5 @@
 export const templates = {
-  default: `
-import React from 'react';
+  default: `import React from 'react';
 
 export default function LandingPage() {
   return (
@@ -19,11 +18,9 @@ export default function LandingPage() {
       </main>
     </div>
   );
-}
-  `,
+}`,
   
-  saas: `
-import React, { useState } from 'react';
+  saas: `import React, { useState } from 'react';
 
 export default function SaaSLanding() {
   const [email, setEmail] = useState('');
@@ -75,11 +72,9 @@ export default function SaaSLanding() {
       </section>
     </div>
   );
-}
-  `,
+}`,
   
-  dashboard: `
-import React, { useState } from 'react';
+  dashboard: `import React, { useState } from 'react';
 
 export default function Dashboard() {
   const [stats] = useState([
@@ -141,11 +136,9 @@ export default function Dashboard() {
       </main>
     </div>
   );
-}
-  `,
+}`,
   
-  ecommerce: `
-import React, { useState } from 'react';
+  ecommerce: `import React, { useState } from 'react';
 
 export default function EcommercePage() {
   const [cart, setCart] = useState([]);
@@ -207,11 +200,9 @@ export default function EcommercePage() {
       </main>
     </div>
   );
-}
-  `,
+}`,
   
-  portfolio: `
-import React, { useState } from 'react';
+  portfolio: `import React, { useState } from 'react';
 
 export default function Portfolio() {
   const [activeTab, setActiveTab] = useState('projects');
@@ -241,11 +232,11 @@ export default function Portfolio() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={\`py-4 px-2 border-b-2 font-medium ${
+                className={\`py-4 px-2 border-b-2 font-medium \${
                   activeTab === tab 
                     ? 'border-blue-600 text-blue-600' 
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                }\`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -311,11 +302,9 @@ export default function Portfolio() {
       </main>
     </div>
   );
-}
-  `,
+}`,
   
-  blog: `
-import React, { useState } from 'react';
+  blog: `import React, { useState } from 'react';
 
 export default function BlogPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -371,11 +360,11 @@ export default function BlogPage() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={\`px-4 py-2 rounded-full ${
+                className={\`px-4 py-2 rounded-full \${
                   selectedCategory === category
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                }\`}
               >
                 {category.charAt(0).toUpperCase() + category.slice(1)}
               </button>
@@ -412,8 +401,7 @@ export default function BlogPage() {
       </main>
     </div>
   );
-}
-  `
+}`
 };
 
 export function getTemplateByCategory(category: string): string {
@@ -429,7 +417,7 @@ export function getTemplateByCategory(category: string): string {
   return categoryMap[category.toLowerCase()] || 'default';
 }
 
-export function getAvailableTemplates() {
+export function getAvailableTemplates(): string[] {
   return Object.keys(templates);
 }
 
