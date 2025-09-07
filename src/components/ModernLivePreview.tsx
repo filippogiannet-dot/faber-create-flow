@@ -101,7 +101,13 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ code, onError, onSucce
   <script crossorigin="anonymous" src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin="anonymous" src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script crossorigin="anonymous" src="https://unpkg.com/@babel/standalone@7.23.4/babel.min.js"></script>
-  <script crossorigin="anonymous" src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin="anonymous" src="https://unpkg.com/tailwindcss@3.4.0/lib/index.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/lib/index.js'"></script>
+  <script>
+    // Fallback Tailwind configuration
+    if (typeof tailwind === 'undefined') {
+      window.tailwind = { config: {} };
+    }
+  </script>
   <style>
     * { box-sizing: border-box; }
     body { 
