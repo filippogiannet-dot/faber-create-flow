@@ -11,6 +11,7 @@ import CodeEditor from "@/components/CodeEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { generateWithAI } from "@/lib/ai/generator";
 import { canUserGenerate } from "@/lib/plans";
+import { useAuth } from "@/integrations/supabase/AuthProvider";
 
 interface ChatMessage {
   id: string;
@@ -35,10 +36,16 @@ export default function Editor() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
     // Load chat history from localStorage
     const saved = localStorage.getItem(`chat-messages-${projectId}`);
-    const parsed: any[] = saved ? JSON.parse(saved) : [];
-    return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+    if (!saved) return [];
+    try {
+      const parsed: any[] = JSON.parse(saved);
+      return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+    } catch {
+      return [];
+    }
   });
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   // Auto-scroll to bottom of chat
   useEffect(() => {

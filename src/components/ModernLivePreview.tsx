@@ -409,14 +409,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({ code, onError, onSucce
         debugLog('info', 'Found Component');
       } else {
         // Search for any component
-        const possibleComponents = Object.keys(window).filter(key => 
-          typeof window[key] === 'function' && 
+        const possibleComponents = Object.keys(globalThis).filter(key => 
+          typeof globalThis[key] === 'function' && 
           key[0] === key[0].toUpperCase() &&
           key !== 'ErrorBoundary'
         );
         
         if (possibleComponents.length > 0) {
-          ComponentToRender = window[possibleComponents[0]];
+          ComponentToRender = globalThis[possibleComponents[0]];
           debugLog('info', \`Found component: \${possibleComponents[0]}\`);
         } else {
           throw new Error('No valid React component found. Make sure to export a component named "App".');

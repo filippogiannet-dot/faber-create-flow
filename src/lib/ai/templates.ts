@@ -7,7 +7,7 @@ export default function LandingPage() {
       <header className="container mx-auto px-6 py-8">
         <nav className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">YourBrand</h1>
-          <button className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700">
+          <button className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
             Get Started
           </button>
         </nav>
@@ -15,6 +15,9 @@ export default function LandingPage() {
       <main className="container mx-auto px-6 py-20 text-center">
         <h2 className="text-5xl font-bold mb-6">Build Something Amazing</h2>
         <p className="text-xl text-gray-300 mb-8">Transform your ideas into reality</p>
+        <button className="px-8 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+          Start Building
+        </button>
       </main>
     </div>
   );
@@ -30,22 +33,30 @@ export default function SaaSLanding() {
     { name: 'Pro', price: '$29', features: ['Unlimited Projects', 'Priority Support'] }
   ];
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Email submitted:', email);
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <section className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-20">
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-5xl font-bold mb-4">Launch Your SaaS</h1>
           <p className="text-xl mb-8">Everything you need to build and scale</p>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            className="px-6 py-3 rounded-lg text-gray-900 mr-4"
-          />
-          <button className="px-8 py-3 bg-white text-purple-600 rounded-lg font-bold">
-            Start Free Trial
-          </button>
+          <form onSubmit={handleSubmit} className="flex justify-center gap-4">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="px-6 py-3 rounded-lg text-gray-900"
+              required
+            />
+            <button type="submit" className="px-8 py-3 bg-white text-purple-600 rounded-lg font-bold hover:bg-gray-100 transition-colors">
+              Start Free Trial
+            </button>
+          </form>
         </div>
       </section>
       
@@ -53,16 +64,19 @@ export default function SaaSLanding() {
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-12">Choose Your Plan</h2>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {plans.map(plan => (
-              <div key={plan.name} className="border rounded-lg p-8 hover:shadow-lg">
+            {plans.map((plan) => (
+              <div key={plan.name} className="border rounded-lg p-8 hover:shadow-lg transition-shadow">
                 <h3 className="text-2xl font-bold">{plan.name}</h3>
                 <p className="text-4xl font-bold my-4">{plan.price}/mo</p>
                 <ul className="space-y-2 mb-8">
-                  {plan.features.map(f => (
-                    <li key={f}>✓ {f}</li>
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      {feature}
+                    </li>
                   ))}
                 </ul>
-                <button className="w-full py-3 bg-blue-600 text-white rounded-lg">
+                <button className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                   Choose {plan.name}
                 </button>
               </div>
@@ -78,10 +92,10 @@ export default function SaaSLanding() {
 
 export default function Dashboard() {
   const [stats] = useState([
-    { label: 'Total Users', value: '12,345', change: '+12%' },
-    { label: 'Revenue', value: '$45,678', change: '+8%' },
-    { label: 'Orders', value: '1,234', change: '+15%' },
-    { label: 'Conversion', value: '3.2%', change: '+2%' }
+    { id: 1, label: 'Total Users', value: '12,345', change: '+12%' },
+    { id: 2, label: 'Revenue', value: '$45,678', change: '+8%' },
+    { id: 3, label: 'Orders', value: '1,234', change: '+15%' },
+    { id: 4, label: 'Conversion', value: '3.2%', change: '+2%' }
   ]);
 
   return (
@@ -94,8 +108,8 @@ export default function Dashboard() {
       
       <main className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-sm border">
+          {stats.map((stat) => (
+            <div key={stat.id} className="bg-white p-6 rounded-lg shadow-sm border">
               <h3 className="text-sm font-medium text-gray-500">{stat.label}</h3>
               <div className="flex items-center justify-between mt-2">
                 <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
@@ -121,13 +135,13 @@ export default function Dashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
             <div className="space-y-3">
-              <button className="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700">
+              <button className="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
                 Create New Project
               </button>
-              <button className="w-full py-2 px-4 border border-gray-300 rounded hover:bg-gray-50">
+              <button className="w-full py-2 px-4 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                 View Reports
               </button>
-              <button className="w-full py-2 px-4 border border-gray-300 rounded hover:bg-gray-50">
+              <button className="w-full py-2 px-4 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
                 Manage Users
               </button>
             </div>
@@ -138,7 +152,7 @@ export default function Dashboard() {
   );
 }`,
   
-  ecommerce: `import React, { useState } from 'react';
+  ecommerce: `import React, { useState, useCallback } from 'react';
 
 interface Product {
   id: number;
@@ -151,16 +165,16 @@ interface Product {
 export default function EcommercePage() {
   const [cart, setCart] = useState<Product[]>([]);
   
-  const products = [
+  const products: Product[] = [
     { id: 1, name: 'Premium Headphones', price: 299, image: '🎧', rating: 4.8 },
     { id: 2, name: 'Wireless Speaker', price: 199, image: '🔊', rating: 4.6 },
     { id: 3, name: 'Smart Watch', price: 399, image: '⌚', rating: 4.9 },
     { id: 4, name: 'Laptop Stand', price: 79, image: '💻', rating: 4.5 }
   ];
 
-  const addToCart = React.useCallback((product: Product) => {
-    setCart([...cart, product]);
-  }, [cart]);
+  const addToCart = useCallback((product: Product) => {
+    setCart(prevCart => [...prevCart, product]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -170,7 +184,7 @@ export default function EcommercePage() {
             <h1 className="text-2xl font-bold">TechStore</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">Cart ({cart.length})</span>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 Checkout
               </button>
             </div>
@@ -181,13 +195,13 @@ export default function EcommercePage() {
       <main className="container mx-auto px-6 py-8">
         <h2 className="text-3xl font-bold mb-8">Featured Products</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map(product => (
+          {products.map((product) => (
             <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
               <div className="p-6 text-center">
                 <div className="text-4xl mb-4">{product.image}</div>
                 <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
                 <div className="flex justify-center mb-2">
-                  {[...Array(5)].map((_, i) => (
+                  {Array.from({ length: 5 }, (_, i) => (
                     <span key={i} className={i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}>
                       ★
                     </span>
@@ -197,7 +211,7 @@ export default function EcommercePage() {
                 <p className="text-2xl font-bold mb-4">${product.price}</p>
                 <button 
                   onClick={() => addToCart(product)}
-                  className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Add to Cart
                 </button>
@@ -236,11 +250,11 @@ export default function Portfolio() {
       <nav className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-6">
           <div className="flex space-x-8">
-            {['projects', 'about', 'contact'].map(tab => (
+            {['projects', 'about', 'contact'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={\`py-4 px-2 border-b-2 font-medium \${
+                className={\`py-4 px-2 border-b-2 font-medium transition-colors \${
                   activeTab === tab 
                     ? 'border-blue-600 text-blue-600' 
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -256,13 +270,13 @@ export default function Portfolio() {
       <main className="container mx-auto px-6 py-12">
         {activeTab === 'projects' && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {projects.map(project => (
+            {projects.map((project) => (
               <div key={project.id} className="bg-white border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="p-6 text-center">
                   <div className="text-6xl mb-4">{project.image}</div>
                   <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
                   <p className="text-gray-600 mb-4">{project.tech}</p>
-                  <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     View Project
                   </button>
                 </div>
@@ -289,19 +303,19 @@ export default function Portfolio() {
               <input
                 type="text"
                 placeholder="Your Name"
-                className="w-full p-3 border border-gray-300 rounded-lg"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <input
                 type="email"
                 placeholder="Your Email"
-                className="w-full p-3 border border-gray-300 rounded-lg"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <textarea
                 placeholder="Your Message"
                 rows={4}
-                className="w-full p-3 border border-gray-300 rounded-lg"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <button className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 Send Message
               </button>
             </form>
@@ -364,11 +378,11 @@ export default function BlogPage() {
       <nav className="bg-white border-b">
         <div className="container mx-auto px-6 py-4">
           <div className="flex flex-wrap gap-4 justify-center">
-            {categories.map(category => (
+            {categories.map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={\`px-4 py-2 rounded-full \${
+                className={\`px-4 py-2 rounded-full transition-colors \${
                   selectedCategory === category
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -383,7 +397,7 @@ export default function BlogPage() {
       
       <main className="container mx-auto px-6 py-12">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPosts.map(post => (
+          {filteredPosts.map((post) => (
             <article key={post.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -392,13 +406,13 @@ export default function BlogPage() {
                   </span>
                   <span className="text-xs text-gray-500">{post.readTime}</span>
                 </div>
-                <h2 className="text-xl font-bold mb-3 hover:text-blue-600 cursor-pointer">
+                <h2 className="text-xl font-bold mb-3 hover:text-blue-600 cursor-pointer transition-colors">
                   {post.title}
                 </h2>
                 <p className="text-gray-600 mb-4">{post.excerpt}</p>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">{post.date}</span>
-                  <button className="text-blue-600 hover:text-blue-800 font-medium">
+                  <button className="text-blue-600 hover:text-blue-800 font-medium transition-colors">
                     Read More →
                   </button>
                 </div>

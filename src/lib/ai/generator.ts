@@ -195,7 +195,7 @@ export function getTemplateByCategory(category: string): string {
     'ecommerce': 'ecommerce',
     'portfolio': 'portfolio',
     'blog': 'blog',
-    'landing': 'saas'
+    'landing': 'default'
   };
   
   return categoryMap[category.toLowerCase()] || 'default';

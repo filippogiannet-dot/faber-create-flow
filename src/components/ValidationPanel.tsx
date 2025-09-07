@@ -3,7 +3,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, CheckCircle, Info, Lightbulb, RefreshCw } from 'lucide-react';
-import { ValidationResult } from '@/utils/codeValidation';
+
+interface ValidationResult {
+  isValid: boolean;
+  errors: Array<{
+    file: string;
+    line: number;
+    column: number;
+    message: string;
+    severity: 'error' | 'warning';
+    code?: string;
+  }>;
+  warnings: Array<{
+    file: string;
+    line: number;
+    column: number;
+    message: string;
+    severity: 'error' | 'warning';
+    code?: string;
+  }>;
+  score: number;
+  suggestions: string[];
+}
 
 interface ValidationPanelProps {
   validationResult: ValidationResult | null;

@@ -144,7 +144,7 @@ const HeroSection = () => {
 
       if (result.success) {
         // Update project with generated code
-        await supabase.functions.invoke('update-project', {
+        const { error: updateError } = await supabase.functions.invoke('update-project', {
           body: {
             projectId: project.id,
             updates: {
@@ -158,6 +158,10 @@ const HeroSection = () => {
             },
           },
         });
+        
+        if (updateError) {
+          console.error('Update project error:', updateError);
+        }
         
         toast({
           title: "App generata!",
