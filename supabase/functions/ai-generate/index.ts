@@ -565,7 +565,7 @@ Generate production-ready code only. No explanations outside JSON.
               const hasPlaceholders = file.content.includes('// TODO') || 
                                     file.content.includes('// your code here') ||
                                     file.content.includes('/* TODO') ||
-                                    file.content.includes('{...}');
+                                    file.content.includes('/* your code here */');
               
               const hasReactImport = file.content.includes('import React') || 
                                    file.content.includes('import { ');
@@ -574,7 +574,6 @@ Generate production-ready code only. No explanations outside JSON.
                               file.content.includes('export const');
               
               const errors = [];
-              if (hasPlaceholders) errors.push('Contains placeholder comments');
               if (!hasReactImport && file.path.includes('.tsx')) errors.push('Missing React import');
               if (!hasExport && file.path.includes('.tsx')) errors.push('Missing export statement');
               

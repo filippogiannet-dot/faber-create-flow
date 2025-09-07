@@ -144,38 +144,8 @@ const HeroSection = () => {
 
       console.log("Generation result:", result);
 
-      // Always proceed if we have a result (even if it's a fallback template)
+      // Show appropriate success message based on result
       if (result.success && result.code && result.code.trim() !== '') {
-        console.log("Generation successful, updating project with code");
-        
-        // Guard: Only update Supabase if we have valid, non-empty code
-        const { error: updateError } = await supabase.functions.invoke('update-project', {
-          body: {
-            projectId: project.id,
-            updates: {
-              generation_status: 'completed',
-              generated_files: { files: [{ path: 'src/App.tsx', content: result.code }] },
-              state: {
-                files: [{ path: 'src/App.tsx', content: result.code }],
-                template: selectedTemplate,
-                lastModified: new Date().toISOString()
-              }
-            },
-          },
-        });
-        
-        if (updateError) {
-          console.error('Update project error:', updateError);
-          toast({
-            variant: "destructive",
-            title: "Errore aggiornamento",
-            description: "Impossibile salvare il progetto, ma il codice è stato generato",
-          });
-        } else {
-          console.log('Project updated successfully');
-        }
-        
-        // Show appropriate success message
         if (result.error) {
           toast({
             title: "App generata con fallback",
@@ -188,76 +158,12 @@ const HeroSection = () => {
           });
         }
       } else {
-        console.error("Generation completely failed:", result);
         toast({
           variant: "destructive",
           title: "Errore nella generazione",
           description: "Impossibile generare il codice. Riprova.",
         });
-        
-        // Update project status to failed
-        await supabase.functions.invoke('update-project', {
-          body: {
-            projectId: project.id,
-            updates: {
-              generation_status: 'failed',
-              error_message: result.error || 'Generazione completamente fallita',
-            },
-          },
-        });
-        
-        // Don't return early - still try legacy fallback
       }
-
-      // Legacy fallback for existing system
-      supabase.functions.invoke('ai-generate', {
-        body: {
-          projectId: project.id,
-          prompt: prompt,
-          isInitial: true
-        }
-      }).then(({ data: result, error: genError }) => {
-        if (genError) {
-          console.error('Generation error:', genError);
-          // Update project status to failed
-          supabase.functions.invoke('update-project', {
-            body: {
-              projectId: project.id,
-              updates: {
-                generation_status: 'failed',
-                error_message: genError.message || 'Errore durante la generazione',
-              },
-            },
-          });
-        } else if (result.success) {
-          console.log('Generation completed successfully');
-          // The realtime subscription in Editor will handle the update
-        } else {
-          console.error('Generation failed:', result.error);
-          // Update project status to failed
-          supabase.functions.invoke('update-project', {
-            body: {
-              projectId: project.id,
-              updates: {
-                generation_status: 'failed',
-                error_message: result.error || 'Generazione fallita',
-              },
-            },
-          });
-        }
-      }).catch(error => {
-        console.error('Unexpected generation error:', error);
-        // Update project status to failed
-        supabase.functions.invoke('update-project', {
-          body: {
-            projectId: project.id,
-            updates: {
-              generation_status: 'failed',
-              error_message: 'Si è verificato un errore imprevisto',
-            },
-          },
-        });
-      });
 
     } catch (error) {
       console.error('Unexpected error:', error);
