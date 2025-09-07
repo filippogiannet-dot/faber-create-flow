@@ -142,11 +142,13 @@ const HeroSection = () => {
         style: 'modern'
       });
 
-      // Validate result before proceeding
+      console.log("Generation result:", result);
+
+      // Always proceed if we have a result (even if it's a fallback template)
       if (result.success && result.code && result.code.trim() !== '') {
         console.log("Generation successful, updating project with code");
         
-        // Update project with generated code
+        // Guard: Only update Supabase if we have valid, non-empty code
         const { error: updateError } = await supabase.functions.invoke('update-project', {
           body: {
             projectId: project.id,
@@ -164,20 +166,33 @@ const HeroSection = () => {
         
         if (updateError) {
           console.error('Update project error:', updateError);
+          toast({
+            variant: "destructive",
+            title: "Errore aggiornamento",
+            description: "Impossibile salvare il progetto, ma il codice è stato generato",
+          });
         } else {
           console.log('Project updated successfully');
         }
         
-        toast({
-          title: "App generata!",
-          description: `Qualità: ${result.validationScore}/100`,
-        });
+        // Show appropriate success message
+        if (result.error) {
+          toast({
+            title: "App generata con fallback",
+            description: `${result.error} - Qualità: ${result.validationScore}/100`,
+          });
+        } else {
+          toast({
+            title: "App generata!",
+            description: `Qualità: ${result.validationScore}/100`,
+          });
+        }
       } else {
-        console.error("Generation failed or returned invalid code:", result);
+        console.error("Generation completely failed:", result);
         toast({
           variant: "destructive",
           title: "Errore nella generazione",
-          description: result.error || "Il codice generato non è valido",
+          description: "Impossibile generare il codice. Riprova.",
         });
         
         // Update project status to failed
@@ -186,10 +201,12 @@ const HeroSection = () => {
             projectId: project.id,
             updates: {
               generation_status: 'failed',
-              error_message: result.error || 'Codice generato non valido',
+              error_message: result.error || 'Generazione completamente fallita',
             },
           },
         });
+        
+        // Don't return early - still try legacy fallback
       }
 
       // Legacy fallback for existing system

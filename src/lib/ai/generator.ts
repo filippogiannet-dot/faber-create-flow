@@ -87,8 +87,8 @@ export async function generateWithAI(
       8. Includa micro-interazioni e feedback visivo
     `;
 
-    // Chiama il servizio AI tramite Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke('ai-generate', {
+    // First attempt: Call AI service
+    let { data, error } = await supabase.functions.invoke('ai-generate', {
       body: {
         prompt: enhancedPrompt,
         systemPrompt: SYSTEM_PROMPT,
@@ -100,10 +100,13 @@ export async function generateWithAI(
       }
     });
 
+    console.log("AI raw response (first attempt):", data);
+    console.log("AI error (first attempt):", error);
+
     if (error) {
       console.error('AI Generation error:', error);
       
-      // Fallback a template se AI fallisce
+      // Fallback to template if AI fails
       return {
         success: true,
         code: templates[template] || templates.default,
@@ -113,9 +116,6 @@ export async function generateWithAI(
       };
     }
 
-    // Debug logs to understand the response structure
-    console.log("AI raw response:", data);
-    
     // Extract code from the correct response structure
     const code = data?.code || 
                  data?.response?.code || 
@@ -124,19 +124,99 @@ export async function generateWithAI(
     
     console.log("Extracted code:", code);
     
-    // Valida che il codice sia corretto
+    // Check if code is empty and retry once
     if (!code || code.trim() === '') {
-      console.error("Generated code is empty or undefined");
-      throw new Error('Generated code is empty');
+      console.warn("⚠️ Generated code is empty. Retrying once...");
+      
+      // Retry with slightly different prompt
+      const retryPrompt = `${enhancedPrompt}\n\nIMPORTANTE: Devi restituire SEMPRE codice React valido. Non restituire mai una risposta vuota.`;
+      
+      const retryResult = await supabase.functions.invoke('ai-generate', {
+        body: {
+          prompt: retryPrompt,
+          systemPrompt: SYSTEM_PROMPT,
+          options: {
+            model: 'gpt-4o-mini',
+            temperature: 0.8, // Slightly higher temperature for retry
+            max_tokens: 4000,
+          }
+        }
+      });
+      
+      console.log("AI retry response:", retryResult.data);
+      
+      const retryCode = retryResult.data?.code || 
+                       retryResult.data?.response?.code || 
+                       retryResult.data?.response?.files?.[0]?.content ||
+                       retryResult.data?.files?.[0]?.content;
+      
+      if (!retryCode || retryCode.trim() === '') {
+        console.error("❌ AI returned empty code twice. Using fallback template.");
+        return {
+          success: true,
+          code: templates[template] || templates.default,
+          tokens: 0,
+          error: 'AI returned empty code twice, using template fallback',
+          validationScore: 70
+        };
+      }
+      
+      // Use retry code
+      const cleanedRetryCode = cleanCode(retryCode);
+      
+      // Basic syntax validation for retry code
+      try {
+        new Function(cleanedRetryCode);
+      } catch (syntaxError) {
+        console.error("Syntax error in retry code:", syntaxError);
+        return {
+          success: true,
+          code: templates[template] || templates.default,
+          tokens: 0,
+          error: 'Retry code had syntax errors, using template fallback',
+          validationScore: 65
+        };
+      }
+      
+      const retryValidationScore = await validateCode(cleanedRetryCode);
+      
+      return {
+        success: true,
+        code: cleanedRetryCode,
+        tokens: retryResult.data?.tokens || 0,
+        validationScore: retryValidationScore
+      };
     }
     
     // Basic syntax validation
-    if (!code.includes('export default') || !code.includes('return')) {
-      console.error("Generated code missing required structure");
-      throw new Error('Generated code is invalid');
+    const cleanedCode = cleanCode(code);
+    
+    // Syntax validation using Function constructor
+    try {
+      new Function(cleanedCode);
+    } catch (syntaxError) {
+      console.error("Syntax error in generated code:", syntaxError);
+      return {
+        success: true,
+        code: templates[template] || templates.default,
+        tokens: 0,
+        error: 'Generated code had syntax errors, using template fallback',
+        validationScore: 60
+      };
     }
 
-    const cleanedCode = cleanCode(code);
+    // Additional structure validation
+    if (!cleanedCode.includes('export default') || !cleanedCode.includes('return')) {
+      console.warn("Generated code missing required React structure, using template fallback");
+      return {
+        success: true,
+        code: templates[template] || templates.default,
+        tokens: 0,
+        error: 'Generated code missing React structure, using template fallback',
+        validationScore: 65
+      };
+    }
+    
     const validationScore = await validateCode(cleanedCode);
 
     return {
@@ -148,13 +228,13 @@ export async function generateWithAI(
   } catch (error) {
     console.error('Generation error:', error);
     
-    // Fallback a template se tutto fallisce
+    // Final fallback to template if everything fails
     return {
       success: true,
       code: templates[template] || templates.default,
       tokens: 0,
-      error: 'Using template due to generation error',
-      validationScore: 70
+      error: `Generation pipeline failed: ${error.message}`,
+      validationScore: 50
     };
   }
 }
