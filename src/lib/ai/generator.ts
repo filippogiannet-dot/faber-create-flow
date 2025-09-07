@@ -56,10 +56,15 @@ export async function generateWithAI(
   options: GenerationOptions = {}
 ): Promise<GenerationResult> {
   try {
-    const { template = 'default', complexity = 'medium', style = 'modern' } = options;
+    const { template: templateOption = 'default', complexity = 'medium', style = 'modern' } = options;
+    
+    // Defensive check to ensure template is valid
+    const template = (typeof templateOption === 'string' && templateOption in templates) 
+      ? templateOption 
+      : 'default';
     
     // Usa template come base
-    const baseTemplate = templates[template] || templates.default;
+    const baseTemplate = templates[template];
     
     const enhancedPrompt = `
       Basandoti su questo template: ${baseTemplate}
