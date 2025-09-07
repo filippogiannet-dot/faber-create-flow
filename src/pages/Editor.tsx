@@ -194,10 +194,19 @@ export default function Editor() {
     } catch (error) {
       console.error("Errore durante la generazione:", error);
       addChatMessage("❌ Errore durante la generazione dell'app", 'status');
+      
+      // More specific error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Edge Function')) {
+        addChatMessage("⚠️ Servizi AI temporaneamente non disponibili - usando modalità fallback", 'status');
+      }
+      
       toast({
         variant: "destructive",
         title: "Errore",
-        description: "Si è verificato un errore durante la generazione dell'app.",
+        description: errorMessage.includes('Failed to fetch') 
+          ? "Servizi AI non disponibili. Prova più tardi o contatta il supporto."
+          : "Si è verificato un errore durante la generazione dell'app.",
       });
     } finally {
       setLoading(false);
