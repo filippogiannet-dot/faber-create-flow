@@ -56,9 +56,9 @@ const templateCategories = [
     icon: ShoppingBag,
     color: 'text-orange-500',
     prompts: [
-      'Store online per prodotti tech',
-      'Marketplace per prodotti artigianali',
-      'Shop di abbigliamento con filtri'
+      'App di gestione inventario',
+      'Sistema di prenotazioni online',
+      'Piattaforma di recensioni prodotti'
     ]
   },
   {
