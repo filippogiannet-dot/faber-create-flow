@@ -139,8 +139,6 @@ export default function Editor() {
     try {
       const initId = addChatMessage("🔄 Inizializzo la generazione...", 'status');
       
-      console.error('Generation error:', error);
-      setError('AI service is currently unavailable. Please check your network connection and try again.');
       const parseId = addChatMessage(isInitialRun ? "🔍 Analizzo il prompt per generare l'app..." : "🔧 Analizzo le modifiche richieste...", 'status');
       
       // Use enhanced AI generation service
