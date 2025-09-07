@@ -4,13 +4,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { Paperclip, Sparkles, FolderOpen, Calendar, Trash2 } from "lucide-react";
+import { Paperclip, Sparkles, FolderOpen, Calendar, Trash2, Zap, Crown } from "lucide-react";
 import { useAuth } from "@/integrations/supabase/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import PromptSuggestions from "@/components/PromptSuggestions";
+import TemplateSelector from "@/components/TemplateSelector";
+import CreditsDisplay from "@/components/CreditsDisplay";
+import { generateWithAI } from "@/lib/ai/generator";
+import { canUserGenerate, getRemainingCredits } from "@/lib/plans";
 
 interface Project {
   id: string;
@@ -24,6 +28,7 @@ interface Project {
 const HeroSection = () => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("default");
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const navigate = useNavigate();
   const { user, session } = useAuth();
@@ -84,21 +89,32 @@ const HeroSection = () => {
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     
-    // Check if user is logged in using real auth context
+    // Check if user is logged in
     if (!user || !session) {
       navigate('/auth');
+      return;
+    }
+    
+    // Check user limits
+    const { canGenerate, reason } = canUserGenerate(user);
+    if (!canGenerate) {
+      toast({
+        variant: "destructive",
+        title: "Limite raggiunto",
+        description: reason,
+      });
       return;
     }
     
     setIsGenerating(true);
     
     try {
-      // First, create a new project via Edge Function
+      // Create a new project
       const { data: created, error: projectError } = await supabase.functions.invoke('create-project', {
         body: {
           name: `App: ${prompt.slice(0, 50)}...`,
           description: prompt,
-          libraries: ['react', 'typescript', 'tailwindcss'],
+          libraries: ['react', 'typescript', 'tailwindcss', 'lucide-react'],
         },
       });
 
@@ -116,10 +132,42 @@ const HeroSection = () => {
 
       console.log("Project created:", project.id);
 
-      // Immediately redirect to editor to show magic loading
+      // Redirect to editor
       navigate(`/editor/${project.id}`);
 
-      // Call the AI generation function in background
+      // Generate with enhanced AI system
+      const result = await generateWithAI(prompt, { 
+        template: selectedTemplate,
+        complexity: 'medium',
+        style: 'modern'
+      });
+
+      if (result.success) {
+        // Update project with generated code
+        await supabase.functions.invoke('update-project', {
+          body: {
+            projectId: project.id,
+            updates: {
+              generation_status: 'completed',
+              generated_files: { files: [{ path: 'src/App.tsx', content: result.code }] },
+              state: {
+                files: [{ path: 'src/App.tsx', content: result.code }],
+                template: selectedTemplate,
+                lastModified: new Date().toISOString()
+              }
+            },
+          },
+        });
+        
+        toast({
+          title: "App generata!",
+          description: `Qualità: ${result.validationScore}/100`,
+        });
+      } else {
+        throw new Error(result.error || 'Generation failed');
+      }
+
+      // Legacy fallback for existing system
       supabase.functions.invoke('ai-generate', {
         body: {
           projectId: project.id,
@@ -213,7 +261,7 @@ const HeroSection = () => {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Scrivi la tua idea e la costruiremo insieme..."
-              className="min-h-[100px] bg-transparent border-0 text-foreground placeholder:text-muted-foreground resize-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none focus:border-transparent focus-visible:border-transparent ring-0 shadow-none p-6"
+              className="min-h-[120px] bg-transparent border-0 text-foreground placeholder:text-muted-foreground resize-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none focus:border-transparent focus-visible:border-transparent ring-0 shadow-none p-6"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -229,6 +277,12 @@ const HeroSection = () => {
                   <Paperclip className="w-4 h-4 mr-2" />
                   Allega
                 </Button>
+                {user && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Zap className="w-3 h-3 mr-1" />
+                    {getRemainingCredits(user)} crediti
+                  </Badge>
+                )}
               </div>
               
               <Button 
@@ -242,6 +296,17 @@ const HeroSection = () => {
             </div>
           </div>
         </div>
+
+        {/* Template Selector for logged-in users */}
+        {user && (
+          <div className="max-w-6xl mx-auto mb-16">
+            <TemplateSelector
+              selectedTemplate={selectedTemplate}
+              onTemplateSelect={setSelectedTemplate}
+              onPromptSuggestion={(suggestedPrompt) => setPrompt(suggestedPrompt)}
+            />
+          </div>
+        )}
 
         {/* Import Options */}
         <div className="text-center mb-16">
@@ -279,6 +344,7 @@ const HeroSection = () => {
           <div className="max-w-6xl mx-auto mb-16">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-foreground">I tuoi progetti</h2>
+              <CreditsDisplay showUpgrade={true} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentProjects.map((project) => (
@@ -330,6 +396,34 @@ const HeroSection = () => {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Credits Display for logged-in users without projects */}
+        {user && recentProjects.length === 0 && (
+          <div className="max-w-6xl mx-auto mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2">
+                <Card className="bg-gradient-card border-border">
+                  <CardContent className="p-8 text-center">
+                    <Sparkles className="w-12 h-12 text-primary mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold chrome-text mb-2">
+                      Inizia a Creare
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      Usa il prompt box sopra per generare la tua prima applicazione
+                    </p>
+                    <div className="flex justify-center gap-2">
+                      <Badge variant="secondary" className="bg-primary/10 text-primary">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Piano {user.user_metadata?.plan || 'Free'}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <CreditsDisplay showUpgrade={true} />
             </div>
           </div>
         )}
