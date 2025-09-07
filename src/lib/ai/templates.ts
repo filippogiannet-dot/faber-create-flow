@@ -165,7 +165,20 @@ export default function EcommercePage() {
   ];
 
   const addToCart = useCallback((product) => {
-    setCart((prevCart) => [...prevCart, product]);
+    setCart(prevCart => [...prevCart, product]);
+  }, []);
+
+  // Add Product interface for typing
+  interface Product {
+    id: number;
+    name: string;
+    price: number;
+    image: string;
+    rating: number;
+  }
+
+  const addToCart = useCallback((product: Product) => {
+    setCart(prevCart => [...prevCart, product]);
   }, []);
 
   return (
